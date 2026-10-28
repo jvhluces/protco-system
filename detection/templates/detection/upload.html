@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProtCo | School Safety Dashboard</title>
+
+    {# URL helpers: the "as" form never raises an error if a name does not exist, it falls back to the path given below. #}
+    {% url 'detection:dashboard' as dashboard_url %}
+    {% url 'detection:damage_check' as damage_url %}
+
+    <style>
+        :root {
+            --navy: #142b49;
+            --blue: #2878df;
+            --blue-2: #5b9bf0;
+            --blue-light: #e9f2ff;
+            --bg: #f3f6fb;
+            --text: #25364b;
+            --muted: #7b899c;
+            --border: #e6ebf2;
+            --green: #16a36a;
+            --orange: #e99528;
+            --red: #dc4c4c;
+            --sidebar-bg: #fbfcff;           /* change to var(--navy) for a dark sidebar */
+            --card-shadow: 0 10px 30px rgba(40, 120, 223, .08);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 22px;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            color: var(--text);
+            background: linear-gradient(160deg, #eaf1fb, #f6f8fc);
+        }
+
+        a { color: inherit; text-decoration: none; }
+        button, input, select { font: inherit; }
+        .ic { width: 20px; height: 20px; flex-shrink: 0; }
+
+        .shell {
+            display: flex;
+            max-width: 1560px;
+            min-height: calc(100vh - 44px);
+            margin: 0 auto;
+            background: #f7f9fd;
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(20, 43, 73, .10);
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 26px 18px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+        }
+
+        .brand { display: flex; align-items: center; gap: 11px; padding: 0 8px 34px; }
+
+        .brand-logo {
+            width: 38px; height: 38px; border-radius: 12px; color: #fff;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg, var(--blue), #4d93ee);
+        }
+
+        .brand span { font-size: 17px; font-weight: 800; color: var(--navy); }
+
+        .nav-link {
+            display: flex; align-items: center; gap: 13px;
+            padding: 14px 16px; margin: 6px 0; border-radius: 14px;
+            font-size: 14px; color: #41546b; transition: background .2s, color .2s;
+        }
+
+        .nav-link .caret { width: 16px; height: 16px; margin-left: auto; opacity: .55; }
+        .nav-link:hover { background: var(--blue-light); color: var(--blue); }
+        .nav-link.active { background: var(--blue-light); color: var(--blue); font-weight: bold; }
+
+        .sidebar-bottom { margin-top: auto; }
+
+        /* MAIN + TOPBAR */
+        .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+        .topbar {
+            height: 78px; display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; padding: 0 32px; background: #fff; border-bottom: 1px solid var(--border);
+        }
+
+        .topbar-left, .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .topbar h1 { margin: 0; font-size: 19px; color: var(--navy); }
+
+        .menu-btn {
+            display: none; width: 40px; height: 40px; border: 0; border-radius: 12px;
+            background: var(--blue-light); color: var(--blue); cursor: pointer; place-items: center;
+        }
+
+        .icon-btn {
+            position: relative; width: 40px; height: 40px; border: 0; border-radius: 50%;
+            background: transparent; color: var(--navy); cursor: pointer;
+            display: grid; place-items: center; transition: background .2s;
+        }
+
+        .icon-btn:hover { background: var(--blue-light); }
+
+        .badge {
+            position: absolute; top: 6px; right: 7px; width: 10px; height: 10px;
+            border-radius: 50%; background: var(--red); border: 2px solid #fff;
+        }
+
+        .search-wrap { display: flex; align-items: center; }
+
+        .search-wrap input {
+            width: 0; opacity: 0; padding: 0; border: 1px solid transparent;
+            border-radius: 999px; outline: none; font-size: 13px;
+            transition: width .25s, opacity .25s, padding .25s, border-color .25s;
+        }
+
+        .search-wrap.open input {
+            width: 220px; opacity: 1; padding: 9px 14px; border-color: var(--border);
+        }
+
+        .profile { display: flex; align-items: center; gap: 10px; padding-left: 6px; }
+
+        .avatar {
+            width: 42px; height: 42px; border-radius: 50%; color: #fff; font-weight: bold;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg, var(--navy), var(--blue));
+        }
+
+        .profile strong { font-size: 13px; color: var(--navy); }
+        .profile small { display: block; margin-top: 3px; font-size: 10px; color: var(--muted); }
+
+        /* CONTENT */
+        .content { display: flex; flex-direction: column; gap: 22px; padding: 26px 32px 34px; }
+
+        .card {
+            background: #fff; border-radius: 24px; padding: 24px;
+            box-shadow: var(--card-shadow); min-width: 0;
+        }
+
+        .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        .card-head h2 { margin: 0; font-size: 20px; line-height: 1.35; color: var(--navy); }
+
+        .collapse-btn {
+            width: 34px; height: 34px; flex-shrink: 0; border: 1px solid var(--border);
+            border-radius: 11px; background: #fff; color: var(--muted); cursor: pointer;
+            display: grid; place-items: center; transition: transform .25s, color .2s;
+        }
+
+        .collapse-btn:hover { color: var(--blue); }
+        .collapsed .collapse-btn { transform: rotate(180deg); }
+        .collapsed .card-body { display: none; }
+        .collapse-btn .ic { width: 16px; height: 16px; }
+
+        .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 22px; }
+        .trio { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 22px; }
+        .bottom { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 22px; }
+
+        /* WEATHER HERO */
+        .weather-card {
+            position: relative; overflow: hidden; display: flex; align-items: center; gap: 22px;
+            padding: 28px 30px; border-radius: 24px; color: #fff;
+            background: linear-gradient(135deg, #2878df 0%, #4f94ee 55%, #6aa8f5 100%);
+            box-shadow: 0 14px 34px rgba(40, 120, 223, .28);
+        }
+
+        .weather-card::after {
+            content: ""; position: absolute; right: -60px; top: -70px; width: 220px; height: 220px;
+            border-radius: 50%; background: rgba(255, 255, 255, .10);
+        }
+
+        .weather-card svg.wx { width: 78px; height: 78px; flex-shrink: 0; }
+        .temp { font-size: 58px; font-weight: bold; letter-spacing: -2px; line-height: 1; }
+        .temp sup { font-size: 28px; font-weight: normal; letter-spacing: 0; vertical-align: top; position: relative; top: 4px; }
+        .wx-info { position: relative; z-index: 1; min-width: 0; }
+        .wx-info strong { display: block; font-size: 17px; }
+        .wx-info p { margin: 6px 0 0; font-size: 12px; line-height: 1.5; opacity: .85; }
+        .wx-dots { display: flex; gap: 5px; margin-top: 12px; }
+        .wx-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .8); }
+        .wx-dots i:nth-child(n+4) { opacity: .45; }
+
+        /* STATS */
+        .stats-card {
+            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 22px 8px;
+            background: #fff; border-radius: 24px; box-shadow: var(--card-shadow);
+        }
+
+        .stat { display: flex; align-items: center; gap: 14px; padding: 6px 22px; min-width: 0; }
+        .stat + .stat { border-left: 1px solid var(--border); }
+
+        .stat-ic {
+            width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+            display: grid; place-items: center; background: var(--blue-light); color: var(--blue);
+        }
+
+        .stat-label { font-size: 12px; color: var(--muted); }
+        .stat-value { margin-top: 5px; font-size: 24px; font-weight: bold; color: var(--navy); letter-spacing: -.5px; overflow-wrap: anywhere; }
+        .stat-value.small { font-size: 16px; }
+        .stat-sub { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 10px; color: var(--muted); }
+        .stat-sub i { width: 7px; height: 7px; border-radius: 50%; background: var(--blue-2); }
+
+        /* MAP THUMBNAIL */
+        .map-thumb {
+            position: relative; height: 170px; margin: 20px 0; border-radius: 18px; overflow: hidden;
+            background:
+                linear-gradient(28deg, transparent 47%, #fff 48%, #fff 51%, transparent 52%),
+                linear-gradient(112deg, transparent 43%, #f9d98a 44%, #f9d98a 46%, transparent 47%),
+                linear-gradient(80deg, transparent 60%, #fff 61%, #fff 63%, transparent 64%),
+                #edf2f7;
+        }
+
+        .map-thumb::before {
+            content: ""; position: absolute; inset: 0; opacity: .5;
+            background-image:
+                linear-gradient(rgba(120, 150, 180, .25) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(120, 150, 180, .25) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .map-thumb .park { position: absolute; background: #cfe8c8; border-radius: 5px; }
+        .map-thumb .ring {
+            position: absolute; left: 42%; top: 38%; width: 78px; height: 78px; border-radius: 50%;
+            background: rgba(40, 120, 223, .16); border: 1px solid rgba(40, 120, 223, .25);
+        }
+        .map-thumb .pin {
+            position: absolute; left: calc(42% + 22px); top: calc(38% + 18px);
+            width: 34px; height: 34px; border-radius: 50%; color: #fff; background: var(--blue);
+            display: grid; place-items: center; border: 3px solid #fff;
+            box-shadow: 0 4px 12px rgba(20, 65, 110, .35);
+        }
+        .map-thumb .pin .ic { width: 16px; height: 16px; }
+        .map-thumb .spot { position: absolute; width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; }
+        .map-thumb .caption {
+            position: absolute; left: 10px; bottom: 10px; padding: 5px 9px; border-radius: 8px;
+            background: rgba(255, 255, 255, .92); font-size: 9px; color: #566c84;
+        }
+
+        .btn-pill {
+            display: block; width: 100%; padding: 15px; border: 0; border-radius: 999px; cursor: pointer;
+            text-align: center; font-size: 15px; font-weight: bold; color: #fff;
+            background: linear-gradient(180deg, #3a8af0, var(--blue));
+            box-shadow: 0 10px 22px rgba(40, 120, 223, .30);
+            transition: transform .2s, filter .2s;
+        }
+
+        .btn-pill:hover { transform: translateY(-1px); filter: brightness(.97); }
+
+        /* FACILITY DAMAGE CHECK */
+        .check-card { text-align: center; display: flex; flex-direction: column; }
+        .check-card .card-head { justify-content: flex-end; }
+        .check-card .card-body { display: flex; flex-direction: column; align-items: center; flex: 1; }
+
+        .cam-badge {
+            width: 112px; height: 112px; margin: -6px 0 10px; border-radius: 50%; color: #fff;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg, #2f80ee, #1f5fc2);
+            box-shadow: 0 16px 30px rgba(40, 120, 223, .30);
+        }
+
+        .cam-badge .ic { width: 52px; height: 52px; }
+        .check-card h2 { margin: 12px 0 0; font-size: 24px; color: var(--navy); }
+        .check-card p { margin: 12px 0 22px; font-size: 15px; line-height: 1.6; color: #4d5f75; }
+        .check-card .btn-pill { margin-top: auto; }
+
+        .last-chip {
+            display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin: 12px 0 22px;
+            padding: 9px 14px; border-radius: 999px; background: var(--blue-light); color: var(--blue);
+            font-size: 12px; font-weight: bold;
+        }
+
+        /* PILLS */
+        .pill { display: inline-block; padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+        .pill-green { color: #168453; background: #e4f8ee; }
+        .pill-orange { color: #a9690c; background: #fff3dc; }
+        .pill-blue { color: #1e62ba; background: #e8f1ff; }
+        .pill-red { color: #b82e38; background: #ffebed; }
+
+        /* RISK SUMMARY TABLE */
+        .select-pill {
+            padding: 9px 14px; border: 1px solid #b9d3f6; border-radius: 999px; background: #fff;
+            color: var(--blue); font-size: 12px; font-weight: bold; cursor: pointer; outline: none;
+        }
+
+        .table-wrap { margin-top: 12px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; }
+
+        th {
+            padding: 14px 12px; font-size: 11px; font-weight: bold; letter-spacing: .6px;
+            color: #8491a3; border-bottom: 1px solid var(--border);
+        }
+
+        td { padding: 14px 12px; border-bottom: 1px solid #edf1f6; font-size: 13px; }
+        tbody tr:last-child td { border-bottom: 0; }
+        tbody tr:hover { background: #f8fbff; }
+
+        .radio {
+            display: inline-block; width: 15px; height: 15px; margin-right: 10px;
+            vertical-align: -3px; border: 2px solid var(--blue); border-radius: 50%;
+        }
+
+        .cell-img { display: flex; align-items: center; gap: 10px; font-weight: bold; }
+        .cell-img img { width: 44px; height: 38px; border-radius: 8px; object-fit: cover; background: #edf1f6; }
+        .row-link { color: var(--blue); font-weight: bold; font-size: 12px; }
+        .empty-row { padding: 34px; text-align: center; color: var(--muted); font-size: 13px; }
+
+        /* RECENT REPORTS */
+        .recent-item {
+            display: flex; align-items: center; gap: 13px; padding: 12px 0;
+            border-bottom: 1px solid #eef2f7;
+        }
+
+        .recent-item:last-child { border-bottom: 0; }
+        .recent-item img { width: 58px; height: 50px; flex-shrink: 0; border-radius: 12px; object-fit: cover; background: #edf1f6; }
+        .recent-item strong { display: block; font-size: 14px; color: var(--navy); }
+        .recent-item small { display: block; margin-top: 5px; font-size: 11px; color: var(--muted); }
+        .recent-item .conf { margin-left: auto; font-size: 12px; font-weight: bold; color: var(--blue); }
+        .add-btn { color: var(--blue); }
+        .empty-note { padding: 38px 10px; text-align: center; font-size: 13px; line-height: 1.7; color: var(--muted); }
+
+        .footer { padding: 4px 0 0; text-align: center; font-size: 11px; color: #8a97a8; }
+
+        /* RESPONSIVE */
+        @media (max-width: 1250px) {
+            .hero, .bottom { grid-template-columns: 1fr; }
+            .trio { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .trio .check-card { order: -1; grid-column: 1 / -1; }
+        }
+
+        @media (max-width: 900px) {
+            body { padding: 0; }
+            .shell { border-radius: 0; min-height: 100vh; }
+            .sidebar {
+                position: fixed; inset: 0 auto 0 0; z-index: 30; transform: translateX(-100%);
+                transition: transform .25s ease; box-shadow: 8px 0 30px rgba(0, 0, 0, .15);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .menu-btn { display: grid; }
+            .topbar { padding: 0 18px; }
+            .content { padding: 20px 16px 30px; }
+        }
+
+        @media (max-width: 640px) {
+            .trio { grid-template-columns: 1fr; }
+            .stats-card { grid-template-columns: 1fr; gap: 6px; }
+            .stat + .stat { border-left: 0; border-top: 1px solid var(--border); padding-top: 14px; }
+            .profile div { display: none; }
+            .weather-card { flex-wrap: wrap; padding: 22px; }
+            .temp { font-size: 46px; }
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- ICON SPRITE -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+        <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></symbol>
+        <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M10 21v-4h4v4"/></symbol>
+        <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+        <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+        <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17v-6a6 6 0 0112 0v6l2 2H4z"/><path d="M10 21h4"/></symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></symbol>
+        <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-12a7 7 0 10-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+        <symbol id="i-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
+        <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.01"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-support" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    </defs>
+</svg>
+
+<div class="shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-logo"><svg class="ic"><use href="#i-shield"/></svg></div>
+            <span>PROTCO System</span>
+        </div>
+
+        <a class="nav-link active" href="{% firstof dashboard_url '/' %}"><svg class="ic"><use href="#i-home"/></svg> Dashboard</a>
+        <a class="nav-link" href="#risk-summary"><svg class="ic"><use href="#i-building"/></svg> Infrastructure</a>
+        <a class="nav-link" href="#risk-summary"><svg class="ic"><use href="#i-file"/></svg> Reports <svg class="ic caret"><use href="#i-chevron"/></svg></a>
+        <a class="nav-link" href="{% firstof damage_url '/damage_check/' %}"><svg class="ic"><use href="#i-shield"/></svg> Detection <svg class="ic caret"><use href="#i-chevron"/></svg></a>
+        <a class="nav-link" href="#settings"><svg class="ic"><use href="#i-gear"/></svg> Settings <svg class="ic caret"><use href="#i-chevron"/></svg></a>
+
+        <div class="sidebar-bottom">
+            <a class="nav-link" href="#support"><svg class="ic"><use href="#i-support"/></svg> Support</a>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation"><svg class="ic"><use href="#i-menu"/></svg></button>
+                <h1>PROTCO System</h1>
+            </div>
+
+            <div class="topbar-right">
+                <div class="search-wrap" id="searchWrap">
+                    <input type="search" id="searchInput" placeholder="Search reports…" aria-label="Search reports">
+                    <button class="icon-btn" id="searchBtn" aria-label="Search"><svg class="ic"><use href="#i-search"/></svg></button>
+                </div>
+                <button class="icon-btn" aria-label="Alerts"><svg class="ic"><use href="#i-bell"/></svg><span class="badge"></span></button>
+                <button class="icon-btn" aria-label="Messages"><svg class="ic"><use href="#i-chat"/></svg><span class="badge"></span></button>
+                <div class="profile">
+                    <div class="avatar">P</div>
+                    <div>
+                        <strong>School Administrator</strong>
+                        <small>Safety Management</small>
+                    </div>
+                    <svg class="ic" style="width:16px;height:16px;color:var(--muted)"><use href="#i-chevron"/></svg>
+                </div>
+            </div>
+        </header>
+
+        <main class="content">
+
+            <!-- HERO ROW -->
+            <section class="hero">
+
+                <article class="weather-card">
+                    <svg class="wx" viewBox="0 0 64 64" aria-hidden="true">
+                        <circle cx="42" cy="21" r="10" fill="#ffc83d"/>
+                        <path d="M17 48a10 10 0 010-20 13 13 0 0125-3 11 11 0 013 23z" fill="#fff"/>
+                        <g fill="#bcd8ff"><circle cx="24" cy="56" r="2.6"/><circle cx="33" cy="58" r="2.6"/><circle cx="42" cy="56" r="2.6"/></g>
+                    </svg>
+                    <div class="temp">--<sup>°C</sup></div>
+                    <div class="wx-info">
+                        <strong>Condition</strong>
+                        <p>Data unavailable<br>Live weather is not connected yet</p>
+                        <p id="todayLabel"></p>
+                        <div class="wx-dots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                    </div>
+                </article>
+
+                <article class="stats-card">
+                    <div class="stat">
+                        <div class="stat-ic"><svg class="ic"><use href="#i-file"/></svg></div>
+                        <div>
+                            <div class="stat-label">Reports Logged</div>
+                            <div class="stat-value">{{ reports|length }}</div>
+                            <div class="stat-sub"><i></i> Saved detections</div>
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-ic"><svg class="ic"><use href="#i-wave"/></svg></div>
+                        <div>
+                            <div class="stat-label">Latest Detection</div>
+                            {% if latest %}
+                                <div class="stat-value small">{{ latest.damage_type }}</div>
+                                <div class="stat-sub"><i></i> {{ latest.confidence|floatformat:2 }} confidence</div>
+                            {% else %}
+                                <div class="stat-value small">None yet</div>
+                                <div class="stat-sub"><i></i> No inspection submitted</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="stat">
+                        <div class="stat-ic"><svg class="ic"><use href="#i-alert"/></svg></div>
+                        <div>
+                            <div class="stat-label">Overall Risk</div>
+                            <div class="stat-value small" id="overallRisk">Awaiting data</div>
+                            <div class="stat-sub"><i></i> <span id="overallRiskSub">Based on recent reports</span></div>
+                        </div>
+                    </div>
+                </article>
+
+            </section>
+
+            <!-- TRIO -->
+            <section class="trio">
+
+                <article class="card" id="weather">
+                    <div class="card-head">
+                        <h2>Weather Forecast<br>&amp; Wind Map</h2>
+                        <button class="collapse-btn" type="button" aria-label="Collapse"><svg class="ic"><use href="#i-chevron"/></svg></button>
+                    </div>
+                    <div class="card-body">
+                        <div class="map-thumb">
+                            <span class="park" style="left:6%;top:12%;width:20%;height:18%"></span>
+                            <span class="park" style="right:8%;bottom:12%;width:24%;height:20%"></span>
+                            <span class="ring"></span>
+                            <span class="pin"><svg class="ic"><use href="#i-pin"/></svg></span>
+                            <span class="spot" style="left:30%;top:30%;background:#2fa56a"></span>
+                            <span class="spot" style="left:72%;top:36%;background:var(--orange)"></span>
+                            <span class="caption">Illustrative preview · live data not connected</span>
+                        </div>
+                        <a class="btn-pill" href="#weather">View Full Forecast</a>
+                    </div>
+                </article>
+
+                <article class="card check-card" id="maintenance">
+                    <div class="card-head">
+                        <button class="collapse-btn" type="button" aria-label="Collapse"><svg class="ic"><use href="#i-chevron"/></svg></button>
+                    </div>
+                    <div class="card-body">
+                        <div class="cam-badge"><svg class="ic"><use href="#i-camera"/></svg></div>
+                        <h2>Facility Damage Check</h2>
+                        {% if latest %}
+                            <div class="last-chip">Last scan: {{ latest.damage_type }}</div>
+                        {% else %}
+                            <p>No damage inspection<br>submitted yet</p>
+                        {% endif %}
+                        <a class="btn-pill" href="{% url 'detection:damage_check' %}">Start Inspection</a>
+                    </div>
+                </article>
+
+                <article class="card" id="school-map">
+                    <div class="card-head">
+                        <h2>School Map &amp;<br>Infrastructure Status</h2>
+                        <button class="collapse-btn" type="button" aria-label="Collapse"><svg class="ic"><use href="#i-chevron"/></svg></button>
+                    </div>
+                    <div class="card-body">
+                        <div class="map-thumb">
+                            <span class="park" style="left:46%;top:6%;width:30%;height:26%"></span>
+                            <span class="park" style="left:6%;bottom:8%;width:22%;height:30%"></span>
+                            <span class="park" style="right:6%;top:40%;width:16%;height:22%"></span>
+                            <span class="ring"></span>
+                            <span class="pin"><svg class="ic"><use href="#i-pin"/></svg></span>
+                            <span class="spot" style="left:34%;top:26%;background:#2fa56a"></span>
+                            <span class="spot" style="left:78%;top:70%;background:var(--orange)"></span>
+                            <span class="caption">Illustrative campus · location not configured</span>
+                        </div>
+                        <a class="btn-pill" href="#school-map">View Full Map</a>
+                    </div>
+                </article>
+
+            </section>
+
+            <!-- BOTTOM -->
+            <section class="bottom">
+
+                <article class="card" id="risk-summary">
+                    <div class="card-head">
+                        <h2>Risk Summary</h2>
+                        <select class="select-pill" id="riskFilter" aria-label="Filter by risk">
+                            <option value="all">All risks</option>
+                            <option value="high">High risk</option>
+                            <option value="moderate">Medium risk</option>
+                            <option value="low">Low risk</option>
+                        </select>
+                    </div>
+
+                    <div class="table-wrap" id="reports">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>REPORT</th>
+                                    <th>DAMAGE TYPE</th>
+                                    <th>DATE</th>
+                                    <th>CONFIDENCE</th>
+                                    <th>RISK</th>
+                                    <th>ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="riskBody">
+                                {% for r in reports|slice:":6" %}
+                                <tr data-text="{{ r.damage_type|lower }}">
+                                    <td><span class="radio"></span><strong>#{{ r.pk }}</strong></td>
+                                    <td>
+                                        <div class="cell-img">
+                                            <img src="{{ r.detected_image.url }}"
+                                                 onerror="this.onerror=null;this.src='{{ r.image.url }}';"
+                                                 alt="Damage report">
+                                            <span>{{ r.damage_type }}</span>
+                                        </div>
+                                    </td>
+                                    <td>{{ r.created_at|date:"M d, Y" }}</td>
+                                    <td>{{ r.confidence|floatformat:2 }}</td>
+                                    <td><span class="pill risk-pill" data-damage="{{ r.damage_type }}">…</span></td>
+                                    <td><a class="row-link" href="{% firstof damage_url '/damage_check/' %}">View</a></td>
+                                </tr>
+                                {% empty %}
+                                <tr class="no-data">
+                                    <td colspan="6" class="empty-row">No damage reports have been recorded yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article class="card">
+                    <div class="card-head">
+                        <h2>Recent Reports</h2>
+                        <a class="collapse-btn add-btn" href="{% firstof damage_url '/damage_check/' %}" aria-label="New inspection" title="New inspection"><svg class="ic"><use href="#i-plus"/></svg></a>
+                    </div>
+
+                    <div class="card-body" style="margin-top:10px">
+                        {% for r in reports|slice:":3" %}
+                        <div class="recent-item">
+                            <img src="{{ r.detected_image.url }}"
+                                 onerror="this.onerror=null;this.src='{{ r.image.url }}';"
+                                 alt="Damage report">
+                            <div>
+                                <strong>{{ r.damage_type }}</strong>
+                                <small>{{ r.created_at|date:"M d, Y - h:i A" }}</small>
+                            </div>
+                            <span class="conf">{{ r.confidence|floatformat:2 }}</span>
+                        </div>
+                        {% empty %}
+                        <div class="empty-note">Nothing to show yet.<br>Start an inspection to create the first report.</div>
+                        {% endfor %}
+                    </div>
+                </article>
+
+            </section>
+
+            <footer class="footer">ProtCo · School Safety &amp; Infrastructure Monitoring System</footer>
+
+        </main>
+    </div>
+</div>
+
+<script>
+    // Sidebar (mobile)
+    const sidebar = document.getElementById("sidebar");
+    document.getElementById("menuBtn").addEventListener("click", () => sidebar.classList.toggle("open"));
+    document.querySelectorAll(".nav-link").forEach(link => {
+        link.addEventListener("click", () => { if (window.innerWidth <= 900) sidebar.classList.remove("open"); });
+    });
+
+    // Date label in the weather card
+    document.getElementById("todayLabel").textContent =
+        new Date().toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+    // Collapsible cards
+    document.querySelectorAll("button.collapse-btn").forEach(btn => {
+        btn.addEventListener("click", () => btn.closest(".card").classList.toggle("collapsed"));
+    });
+
+    // Search (filters the Risk Summary rows)
+    const searchWrap = document.getElementById("searchWrap");
+    const searchInput = document.getElementById("searchInput");
+    document.getElementById("searchBtn").addEventListener("click", () => {
+        searchWrap.classList.toggle("open");
+        if (searchWrap.classList.contains("open")) searchInput.focus();
+        else { searchInput.value = ""; applyFilters(); }
+    });
+    searchInput.addEventListener("input", applyFilters);
+
+    // Risk level from the detected damage name (same grouping used on the Damage Detector page)
+    const HIGH_KEYS = ["wire", "electric", "outlet", "socket", "cable", "glass", "window", "shatter", "pane", "mirror",
+        "ceiling", "roof", "truss", "sagging", "collapse", "fallen", "falling", "debris",
+        "column", "beam", "foundation", "rebar", "structural", "spalling", "concrete"];
+    const LOW_KEYS = ["paint", "peel", "flake", "plaster", "chip", "scratch", "graffiti", "wear", "corrosion", "rust",
+        "furniture", "chair", "desk", "table", "door", "cabinet", "locker", "board", "shelf", "bench", "hinge"];
+
+    const RISK_META = {
+        high:     { text: "High Risk",   cls: "pill-red" },
+        moderate: { text: "Medium Risk", cls: "pill-orange" },
+        low:      { text: "Low Risk",    cls: "pill-green" },
+        none:     { text: "No Damage",   cls: "pill-blue" }
+    };
+
+    function severityOf(name) {
+        const n = (name || "").toLowerCase();
+        if (/\b(no damage|none|nothing|no detection)\b/.test(n)) return "none";
+        if (HIGH_KEYS.some(k => n.includes(k))) return "high";
+        if (LOW_KEYS.some(k => n.includes(k))) return "low";
+        return "moderate";
+    }
+
+    const rank = { high: 3, moderate: 2, low: 1, none: 0 };
+    let worst = null;
+
+    document.querySelectorAll(".risk-pill").forEach(pill => {
+        const sev = severityOf(pill.dataset.damage);
+        const meta = RISK_META[sev];
+        pill.textContent = meta.text;
+        pill.classList.add(meta.cls);
+        pill.closest("tr").dataset.sev = sev;
+        if (worst === null || rank[sev] > rank[worst]) worst = sev;
+    });
+
+    if (worst) {
+        document.getElementById("overallRisk").textContent = RISK_META[worst].text;
+        document.getElementById("overallRiskSub").textContent = "Highest among recent reports";
+    }
+
+    // Filter by risk + search text
+    const riskFilter = document.getElementById("riskFilter");
+    riskFilter.addEventListener("change", applyFilters);
+
+    function applyFilters() {
+        const level = riskFilter.value;
+        const q = searchInput.value.trim().toLowerCase();
+        document.querySelectorAll("#riskBody tr[data-sev]").forEach(row => {
+            const okLevel = level === "all" || row.dataset.sev === level;
+            const okText = !q || (row.dataset.text || "").includes(q);
+            row.style.display = okLevel && okText ? "" : "none";
+        });
+    }
+</script>
+
+</body>
+</html>
