@@ -10,7 +10,7 @@
     {% url 'detection:damage_check' as damage_url %}
 
     <script>
-        /* If a scan was just submitted, hide the result until the reveal animation starts (prevents a flash). */
+      
         try { if (sessionStorage.getItem("protco_scan_pending") === "1") document.documentElement.classList.add("scan-pending"); } catch (e) {}
     </script>
 
@@ -34,12 +34,10 @@
         * { box-sizing: border-box; }
 
         body {
-            margin: 0;
-            padding: 22px;
-            min-height: 100vh;
+              margin: 0;
             font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
             color: var(--text);
-            background: linear-gradient(160deg, #eaf1fb, #f6f8fc);
         }
 
         a { color: inherit; text-decoration: none; }
@@ -48,17 +46,19 @@
         .ic { width: 20px; height: 20px; flex-shrink: 0; }
 
         .shell {
-            display: flex;
-            max-width: 1560px;
+           display: flex;
+            width: 1700px;
             min-height: calc(100vh - 44px);
             margin: 0 auto;
             background: #f7f9fd;
             border-radius: 30px;
             box-shadow: 0 20px 60px rgba(20, 43, 73, .10);
             overflow: hidden;
+            margin-left: -20px;
+            margin-top: -10px;
         }
 
-        /* SIDEBAR */
+
         .sidebar {
             width: 250px; flex-shrink: 0; display: flex; flex-direction: column;
             padding: 26px 18px; background: var(--sidebar-bg); border-right: 1px solid var(--border);
@@ -86,7 +86,7 @@
 
         .sidebar-bottom { margin-top: auto; }
 
-        /* MAIN + TOPBAR */
+  
         .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 
         .topbar {
@@ -124,7 +124,7 @@
             border-radius: 999px; background: #fff; font-size: 13px; color: var(--navy);
         }
 
-        /* CONTENT */
+     
         .content { padding: 26px 32px 34px; }
 
         .card {
@@ -137,7 +137,7 @@
             gap: 24px; align-items: start;
         }
 
-        /* BUTTONS */
+     
         .btn-solid, .btn-outline {
             display: inline-flex; align-items: center; justify-content: center; gap: 9px;
             padding: 14px 22px; border-radius: 999px; font-size: 14px; font-weight: bold; cursor: pointer;
@@ -155,7 +155,6 @@
         button:disabled { opacity: .5; cursor: not-allowed; transform: none !important; filter: none !important; }
         .btn-solid .ic, .btn-outline .ic { width: 18px; height: 18px; }
 
-        /* SCAN CARD */
         .toolbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
         .live-label { font-size: 12px; color: var(--muted); }
         .live-label.on { color: var(--green); font-weight: bold; }
@@ -443,7 +442,7 @@
                 <div class="avatar">P<span class="badge"></span></div>
                 <button class="icon-btn" aria-label="Alerts"><svg class="ic"><use href="#i-bell"/></svg><span class="badge orange"></span></button>
                 <div class="profile-pill">
-                    <span>School Administrator</span>
+                    <span>Teacher</span>
                     <svg class="ic" style="width:16px;height:16px"><use href="#i-chevron"/></svg>
                 </div>
             </div>
@@ -526,7 +525,13 @@
                             <div class="divider"></div>
                             <div class="result-bottom">
                                 <div>
-                                    <div class="damage-name" id="damageName">{{ latest.damage_type }}</div>
+                                    <div
+    class="damage-name"
+    id="damageName"
+    data-previous-count="{{ previous_similar_count|default:0 }}"
+>
+    {{ latest.damage_type }}
+</div>
                                     <div class="muted">Confidence</div>
                                 </div>
                                 <div class="conf">
@@ -1051,6 +1056,49 @@
         }
 
         const a = matches[0];
+        const previousCount = Number(
+    damageNameEl?.dataset.previousCount || 0
+);
+
+const category = a.id === "crack" || a.id === "structural-crack"
+    ? "crack"
+    : a.id === "glass"
+    ? "glass"
+    : a.id === "electrical"
+    ? "electrical"
+    : "general";
+
+const openings = {
+    crack: [
+        "A possible wall or surface crack was detected. Record its condition and arrange an inspection.",
+        "The latest scan identified a possible crack. Keep a dated photo so staff can compare future observations.",
+        "A crack may need attention. Document the finding and notify the school maintenance team."
+    ],
+    glass: [
+        "Possible broken glass or window damage was detected. Keep students away from the affected area.",
+        "The scan flagged a possible glass hazard. Arrange safe isolation and inspection.",
+        "This finding may involve sharp glass. Prevent access until authorized staff can assess it."
+    ],
+    electrical: [
+        "Possible electrical damage was detected. Keep people away and notify qualified staff.",
+        "The scan flagged a potential electrical hazard. Do not touch the affected equipment or wiring.",
+        "This finding needs prompt review by qualified maintenance personnel."
+    ],
+    general: [
+        "The latest scan identified possible infrastructure damage. Record it and request an inspection.",
+        "A potential damage issue was detected. Keep the area safe while staff review the report.",
+        "This finding needs verification. Document the condition and notify school maintenance."
+    ]
+};
+
+const choices = openings[category];
+const opening = choices[
+    Math.floor(Math.random() * choices.length)
+];
+
+const historyMessage = previousCount > 0
+    ? ` There are ${previousCount} earlier report(s) in this damage category. Compare their photos and locations to determine whether this is a recurring or separate issue.`
+    : " No earlier report in this damage category was found in the current report history.";
 
         if (conf !== null && conf < 50) {
             cards.push(aiCard({
@@ -1062,10 +1110,14 @@
 
         const others = matches.slice(1).map(m => m.label);
         cards.push(aiCard({
-            title: "Immediate Action",
-            text: a.doNow[0],
-            caption: a.label + (others.length ? " · also detected: " + others.join(", ") : "")
-        }));
+    title: "Immediate Action",
+    text: opening + historyMessage,
+    caption: a.label + (
+        others.length
+            ? " · also detected: " + others.join(", ")
+            : ""
+    )
+}));
 
         const rest = a.doNow.slice(1);
         cards.push(aiCard({
