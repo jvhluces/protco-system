@@ -401,3 +401,5 @@ def upload_and_detect(request):
             "previous_similar_count": previous_similar_count,
         },
     )
+def weather_forecast(request):
+    return render(request, 'detection/weather_forecast.html')

@@ -386,10 +386,12 @@
             <span>PROTCO System</span>
         </div>
 
-        <a class="nav-link active" href="{% firstof dashboard_url '/' %}"><svg class="ic"><use href="#i-home"/></svg> Dashboard</a>
+        <a class="nav-link active" href="/"><svg class="ic"><use href="#i-home"/></svg> Dashboard</a>
+        <a class="nav-link" href="{% url 'detection:weather_forecast' %}"><svg class="ic"><use href="#i-cloud"/></svg> Weather & Forecast</a>
         <a class="nav-link" href="#risk-summary"><svg class="ic"><use href="#i-building"/></svg> Infrastructure</a>
         <a class="nav-link" href="#risk-summary"><svg class="ic"><use href="#i-file"/></svg> Reports <svg class="ic caret"><use href="#i-chevron"/></svg></a>
         <a class="nav-link" href="{% firstof damage_url '/damage_check/' %}"><svg class="ic"><use href="#i-shield"/></svg> Detection <svg class="ic caret"><use href="#i-chevron"/></svg></a>
+
         <a class="nav-link" href="#settings"><svg class="ic"><use href="#i-gear"/></svg> Settings <svg class="ic caret"><use href="#i-chevron"/></svg></a>
 
         <div class="sidebar-bottom">

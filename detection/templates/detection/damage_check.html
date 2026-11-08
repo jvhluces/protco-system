@@ -164,6 +164,14 @@
             position: relative; margin-top: 20px; padding: 26px 30px 30px; border-radius: 20px;
             background: #f5f8fd;
         }
+         .nav-link {
+            display: flex; align-items: center; gap: 13px;
+            padding: 14px 16px; margin: 6px 0; border-radius: 14px;
+            font-size: 14px; color: #41546b; transition: background .2s, color .2s;
+        }
+        .nav-link.active { background: var(--blue-light); color: var(--blue); font-weight: bold; }
+         .nav-link .caret { width: 16px; height: 16px; margin-left: auto; opacity: .55; }
+        .nav-link:hover { background: var(--blue-light); color: var(--blue); }
 
         .preview-tag {
             position: absolute; left: 36px; top: 11px; padding: 0 8px; background: #f5f8fd;
@@ -419,10 +427,14 @@
             <span>Dashboard</span>
         </div>
 
-        <a class="nav-link" href="{% firstof dashboard_url '/' %}"><svg class="ic"><use href="#i-home"/></svg> Dashboard</a>
-        <a class="nav-link" href="{% firstof dashboard_url '/' %}#reports"><svg class="ic"><use href="#i-file"/></svg> Reports</a>
-        <a class="nav-link active" href="{% firstof damage_url '/damage_check/' %}"><svg class="ic"><use href="#i-shield"/></svg> Detection</a>
-        <a class="nav-link" href="#settings"><svg class="ic"><use href="#i-gear"/></svg> Settings</a>
+        <a class="nav-link" href="/"><svg class="ic"><use href="#i-home"/></svg> Dashboard</a>
+        <a class="nav-link" href="{% url 'detection:weather_forecast' %}"><svg class="ic"><use href="#i-cloud"/></svg> Weather & Forecast</a>
+        <a class="nav-link" href="#risk-summary"><svg class="ic"><use href="#i-building"/></svg> Infrastructure</a>
+        <a class="nav-link" href="#risk-summary"><svg class="ic"><use href="#i-file"/></svg> Reports <svg class="ic caret"><use href="#i-chevron"/></svg></a>
+        <a class="nav-link active" href="{% firstof damage_url '/damage_check/' %}"><svg class="ic"><use href="#i-shield"/></svg> Detection <svg class="ic caret"><use href="#i-chevron"/></svg></a>
+
+        <a class="nav-link" href="#settings"><svg class="ic"><use href="#i-gear"/></svg> Settings <svg class="ic caret"><use href="#i-chevron"/></svg></a>
+
 
         <div class="sidebar-bottom">
             <a class="nav-link" href="#support"><svg class="ic"><use href="#i-support"/></svg> Support</a>
@@ -451,7 +463,7 @@
         <main class="content">
             <div class="detector-grid">
 
-                <!-- LEFT: SCANNER + RESULT -->
+               
                 <section class="card">
 
                     <div class="toolbar">
