@@ -437,10 +437,14 @@
                         <path d="M17 48a10 10 0 010-20 13 13 0 0125-3 11 11 0 013 23z" fill="#fff"/>
                         <g fill="#bcd8ff"><circle cx="24" cy="56" r="2.6"/><circle cx="33" cy="58" r="2.6"/><circle cx="42" cy="56" r="2.6"/></g>
                     </svg>
-                    <div class="temp">--<sup>°C</sup></div>
+                    <div class="temp">{% if weather %}{{ weather.temp }}{% else %}--{% endif %}<sup>°C</sup></div>
                     <div class="wx-info">
-                        <strong>Condition</strong>
-                        <p>Data unavailable<br>Live weather is not connected yet</p>
+                        <strong>{% if weather %}{{ weather.description }}{% else %}Weather unavailable{% endif %}</strong>
+                        {% if weather %}
+                            <p>{{ weather.city }}<br>Humidity: {{ weather.humidity }}% | Wind: {{ weather.wind_kmh }} km/h</p>
+                        {% else %}
+                            <p>{{ weather_error }}</p>
+                        {% endif %}
                         <p id="todayLabel"></p>
                         <div class="wx-dots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
                     </div>
@@ -500,7 +504,7 @@
                             <span class="spot" style="left:72%;top:36%;background:var(--orange)"></span>
                             <span class="caption">Illustrative preview · live data not connected</span>
                         </div>
-                        <a class="btn-pill" href="#weather">View Full Forecast</a>
+                        <a class="btn-pill" href="{% url 'detection:weather_forecast' %}">View Full Forecast</a>
                     </div>
                 </article>
 

@@ -1,6 +1,11 @@
 
+import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 from django.conf import settings
 from django.shortcuts import render
@@ -13,6 +18,127 @@ from .models import DamageReport
 logger = logging.getLogger(__name__)
 
 
+def _fetch_openweather(endpoint, location):
+    if not settings.OPENWEATHER_API_KEY:
+        return None, "Set OPENWEATHER_API_KEY in your environment and restart Django."
+
+    params = urlencode(
+        {
+            "q": location,
+            "appid": settings.OPENWEATHER_API_KEY,
+            "units": "metric",
+        }
+    )
+    url = f"https://api.openweathermap.org/data/2.5/{endpoint}?{params}"
+
+    try:
+        with urlopen(url, timeout=5) as response:
+            data = json.loads(response.read())
+    except HTTPError as exc:
+        logger.warning("OpenWeather returned HTTP status %s.", exc.code)
+        if exc.code in (401, 403):
+            return None, "OpenWeather rejected the API key. Check that it is active."
+        if exc.code == 404:
+            return None, "OpenWeather could not find the configured city."
+        return None, f"OpenWeather request failed (HTTP {exc.code})."
+    except (URLError, TimeoutError):
+        logger.warning("Could not connect to OpenWeather.")
+        return None, "Could not connect to OpenWeather. Try again later."
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        logger.warning("OpenWeather returned invalid JSON.")
+        return None, "OpenWeather returned an invalid response."
+
+    return data, None
+
+
+def get_current_weather(location=None):
+    location = location or settings.OPENWEATHER_CITY
+    data, error = _fetch_openweather("weather", location)
+    if error:
+        return None, error
+
+    try:
+        weather = data["weather"][0]
+        city = data["name"]
+        country = data["sys"]["country"]
+        icon = weather["icon"]
+        if not (len(icon) == 3 and icon[:2].isdigit() and icon[2] in "dn"):
+            icon = "01d"
+        return {
+            "temp": round(data["main"]["temp"]),
+            "description": weather["description"].capitalize(),
+            "city": f"{city}, {country}",
+            "humidity": data["main"]["humidity"],
+            "wind_kmh": round(data["wind"]["speed"] * 3.6),
+            "icon": icon,
+        }, None
+    except (IndexError, KeyError, TypeError, ValueError):
+        logger.warning("OpenWeather response is missing expected weather fields.")
+        return None, "OpenWeather returned incomplete weather data."
+
+
+def get_weather_forecast(location):
+    data, error = _fetch_openweather("forecast", location)
+    if error:
+        return None, error
+
+    try:
+        timezone_offset = data["city"]["timezone"]
+        daily = {}
+        for entry in data["list"]:
+            local_time = datetime.fromtimestamp(
+                entry["dt"] + timezone_offset,
+                tz=timezone.utc,
+            )
+            day = local_time.date()
+            conditions = entry["weather"][0]
+            forecast = daily.setdefault(
+                day,
+                {
+                    "date": local_time.strftime("%a, %b %d").replace(" 0", " "),
+                    "temp_min": entry["main"]["temp_min"],
+                    "temp_max": entry["main"]["temp_max"],
+                    "description": conditions["description"].capitalize(),
+                    "icon": (
+                        conditions["icon"]
+                        if len(conditions["icon"]) == 3
+                        and conditions["icon"][:2].isdigit()
+                        and conditions["icon"][2] in "dn"
+                        else "01d"
+                    ),
+                    "noon_distance": float("inf"),
+                },
+            )
+            forecast["temp_min"] = min(
+                forecast["temp_min"],
+                entry["main"]["temp_min"],
+            )
+            forecast["temp_max"] = max(
+                forecast["temp_max"],
+                entry["main"]["temp_max"],
+            )
+            noon_distance = abs(
+                (local_time.hour + local_time.minute / 60) - 12
+            )
+            if noon_distance < forecast["noon_distance"]:
+                forecast["description"] = conditions["description"].capitalize()
+                icon = conditions["icon"]
+                forecast["icon"] = (
+                    icon
+                    if len(icon) == 3
+                    and icon[:2].isdigit()
+                    and icon[2] in "dn"
+                    else "01d"
+                )
+                forecast["noon_distance"] = noon_distance
+
+        return [
+            {key: value for key, value in forecast.items() if key != "noon_distance"}
+            for _, forecast in sorted(daily.items())[:5]
+        ], None
+    except (IndexError, KeyError, TypeError, ValueError, OverflowError):
+        logger.warning("OpenWeather forecast response is missing expected fields.")
+        return None, "OpenWeather returned incomplete forecast data."
 
 
 MODEL_CANDIDATES = [
@@ -390,7 +516,8 @@ def upload_and_detect(request):
         reports,
     )
 
- 
+    weather, weather_error = get_current_weather()
+
     return render(
         request,
         template_name,
@@ -399,7 +526,23 @@ def upload_and_detect(request):
             "latest": latest,
             "error_message": error_message,
             "previous_similar_count": previous_similar_count,
+            "weather": weather,
+            "weather_error": weather_error,
         },
     )
 def weather_forecast(request):
-    return render(request, 'detection/weather_forecast.html')
+    location = request.GET.get("location", "").strip() or settings.OPENWEATHER_CITY
+    weather, weather_error = get_current_weather(location)
+    forecast, forecast_error = get_weather_forecast(location)
+
+    return render(
+        request,
+        "detection/weather_forecast.html",
+        {
+            "location": location,
+            "weather": weather,
+            "weather_error": weather_error,
+            "forecast": forecast,
+            "forecast_error": forecast_error,
+        },
+    )

@@ -11,9 +11,13 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "").strip()
+OPENWEATHER_CITY = os.environ.get("OPENWEATHER_CITY", "Manila,PH").strip()
 
 
 # Quick-start development settings - unsuitable for production

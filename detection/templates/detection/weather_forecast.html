@@ -23,11 +23,23 @@
             --green: #16a36a;
             --orange: #e99528;
             --red: #dc4c4c;
+            --card-shadow: 0 16px 40px rgba(20, 43, 73, 0.08);
         }
 
         * { box-sizing: border-box; }
 
-        
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
         body {
              margin: 0;
             font-family: Arial, Helvetica, sans-serif;
@@ -185,6 +197,51 @@
         .wx-dots { display: flex; gap: 5px; margin-top: 12px; }
         .wx-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .8); }
         .wx-dots i:nth-child(n+4) { opacity: .45; }
+
+        .weather-page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+        .weather-page-head h2 { margin: 0; color: var(--navy); font-size: 26px; }
+        .weather-page-head p { margin: 7px 0 0; color: var(--muted); font-size: 14px; }
+        .location-search { display: flex; width: min(100%, 430px); gap: 10px; }
+        .location-search input {
+            flex: 1; min-width: 0; padding: 12px 16px; border: 1px solid var(--border);
+            border-radius: 13px; outline: none; background: #fff; color: var(--text);
+            box-shadow: 0 8px 18px rgba(20, 43, 73, 0.04);
+            transition: border-color .2s, box-shadow .2s, transform .2s;
+        }
+        .location-search input::placeholder { color: var(--muted); }
+        .location-search input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(40, 120, 223, .12), 0 10px 24px rgba(40, 120, 223, .08);
+        }
+        .location-search button {
+            padding: 0 20px; border: 0; border-radius: 13px; color: #fff; font-weight: bold;
+            background: linear-gradient(180deg, #3a8af0, var(--blue));
+            box-shadow: 0 10px 18px rgba(40, 120, 223, .20);
+            cursor: pointer; transition: transform .2s, filter .2s;
+        }
+        .location-search button:hover { transform: translateY(-1px); filter: brightness(.98); }
+        .weather-current {
+            display: flex; align-items: center; justify-content: space-between; gap: 24px;
+            padding: 30px; border-radius: 24px; color: #fff;
+            background: linear-gradient(130deg, #2878df, #67a5f2);
+            box-shadow: 0 14px 34px rgba(40, 120, 223, .20);
+        }
+        .current-location { display: flex; align-items: center; gap: 8px; font-size: 14px; opacity: .9; }
+        .current-location .ic { width: 17px; height: 17px; }
+        .current-condition { margin-top: 12px; font-size: 20px; font-weight: bold; }
+        .current-details { margin-top: 10px; font-size: 13px; opacity: .9; }
+        .current-temperature { display: flex; align-items: center; gap: 4px; font-size: 66px; font-weight: bold; }
+        .current-temperature sup { margin-top: -28px; font-size: 24px; font-weight: normal; }
+        .current-temperature img { width: 90px; height: 90px; }
+        .weather-message { margin: 0; padding: 15px 18px; border-radius: 14px; background: #fff3dc; color: #80530d; }
+        .forecast-heading { margin: 6px 0 0; color: var(--navy); font-size: 20px; }
+        .forecast-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+        .forecast-card { padding: 18px 12px; border: 1px solid var(--border); border-radius: 18px; background: #fff; text-align: center; }
+        .forecast-card strong { display: block; color: var(--navy); font-size: 13px; }
+        .forecast-card img { width: 68px; height: 68px; }
+        .forecast-card p { min-height: 32px; margin: 0; color: var(--muted); font-size: 12px; }
+        .forecast-temps { margin-top: 8px; color: var(--navy); font-size: 14px; font-weight: bold; }
+        .forecast-temps span { margin-left: 6px; color: var(--muted); font-weight: normal; }
 
       
         .stats-card {
@@ -350,6 +407,12 @@
             .profile div { display: none; }
             .weather-card { flex-wrap: wrap; padding: 22px; }
             .temp { font-size: 46px; }
+            .weather-page-head { align-items: stretch; flex-direction: column; }
+            .location-search { width: 100%; }
+            .weather-current { align-items: flex-start; flex-direction: column-reverse; gap: 12px; padding: 24px; }
+            .current-temperature { font-size: 54px; }
+            .current-temperature img { width: 70px; height: 70px; }
+            .forecast-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
     </style>
 </head>
@@ -427,9 +490,63 @@
         </header>
 
         <main class="content">
+            <section class="weather-page-head">
+                <div>
+                    <h2>Weather &amp; Forecast</h2>
+                    <p>Current conditions and a 5-day forecast for your location.</p>
+                </div>
+                <form class="location-search" method="get" action="{% url 'detection:weather_forecast' %}">
+                    <label class="sr-only" for="location">Search city or location</label>
+                    <input id="location" name="location" type="search" value="{{ location }}"
+                           placeholder="Enter city, e.g. Manila, PH" required>
+                    <button type="submit">Search</button>
+                </form>
+            </section>
 
+            {% if weather %}
+                <section class="weather-current" aria-label="Current weather">
+                    <div>
+                        <div class="current-location">
+                            <svg class="ic"><use href="#i-pin"/></svg>
+                            <span>{{ weather.city }}</span>
+                        </div>
+                        <div class="current-condition">{{ weather.description }}</div>
+                        <div class="current-details">
+                            Humidity {{ weather.humidity }}% <span aria-hidden="true">·</span>
+                            Wind {{ weather.wind_kmh }} km/h
+                        </div>
+                    </div>
+                    <div class="current-temperature">
+                        <img src="https://openweathermap.org/img/wn/{{ weather.icon }}@2x.png"
+                             alt="{{ weather.description }}">
+                        {{ weather.temp }}<sup>°C</sup>
+                    </div>
+                </section>
+            {% elif weather_error %}
+                <p class="weather-message" role="status">{{ weather_error }}</p>
+            {% endif %}
 
-           
+            <section aria-labelledby="forecast-heading">
+                <h3 class="forecast-heading" id="forecast-heading">5-day forecast</h3>
+                {% if forecast %}
+                    <div class="forecast-grid">
+                        {% for day in forecast %}
+                            <article class="forecast-card">
+                                <strong>{{ day.date }}</strong>
+                                <img src="https://openweathermap.org/img/wn/{{ day.icon }}@2x.png"
+                                     alt="{{ day.description }}">
+                                <p>{{ day.description }}</p>
+                                <div class="forecast-temps">
+                                    {{ day.temp_max|floatformat:0 }}°
+                                    <span>{{ day.temp_min|floatformat:0 }}°</span>
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                {% elif forecast_error %}
+                    <p class="weather-message" role="status">{{ forecast_error }}</p>
+                {% endif %}
+            </section>
         </main>
     </div>
 </div>
