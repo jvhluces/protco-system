@@ -1,0 +1,318 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | ProtCo</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --sidebar-width: 270px;
+            --primary-blue: #2563eb;
+            --primary-light: #eff6ff;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            --gradient-light-blue: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { display: flex; background-color: var(--bg-color); height: 100vh; overflow: hidden; }
+        .sidebar { width: var(--sidebar-width); min-width: var(--sidebar-width); background: white; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 30px 0; }
+        .brand { display: flex; align-items: center; gap: 14px; padding: 0 30px 20px; }
+        .brand-icon { background: var(--gradient-light-blue); color: white; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
+        .brand-text { font-weight: 700; font-size: 16px; color: var(--text-main); line-height: 1.1; text-transform: uppercase; letter-spacing: 0.5px; }
+        .nav-items { flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 16px; margin-top: 40px; }
+        .nav-item { display: flex; align-items: center; gap: 16px; padding: 14px 20px; color: var(--text-muted); text-decoration: none; font-size: 14.5px; font-weight: 500; border-radius: 12px; transition: all 0.2s ease-in-out; cursor: pointer; }
+        .nav-item:hover { background: #f1f5f9; color: var(--text-main); transform: translateX(4px); }
+        .nav-item.active { background: var(--primary-light); color: var(--primary-blue); font-weight: 600; }
+        .nav-item i { font-size: 22px; }
+        .nav-arrow { margin-left: auto; font-size: 14px !important; color: #94a3b8; }
+        .logout-btn { margin-top: auto; color: #ef4444; background: none; border: none; width: 100%; text-align: left; font-size: 14.5px; cursor: pointer; padding: 14px 20px; border-radius: 12px; display: flex; align-items: center; gap: 16px; font-weight: 500; transition: 0.2s; }
+        .logout-btn:hover { background: #fef2f2; color: #dc2626; }
+        .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; }
+        
+        .topbar { background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 100; }
+        .page-title { font-size: 18px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .top-actions { display: flex; align-items: center; gap: 35px; }
+        .top-search-box { display: flex; align-items: center; gap: 10px; background: #f8fafc; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 12px; width: 280px; }
+        .top-search-box input { border: none; background: none; outline: none; width: 100%; font-size: 13.5px; }
+
+        .top-icons { display: flex; gap: 28px; color: var(--text-muted); font-size: 24px; position: relative; }
+        .icon-btn { cursor: pointer; position: relative; transition: 0.2s; }
+        .icon-btn:hover { color: var(--primary-blue); }
+        .badge-count { position: absolute; top: -5px; right: -8px; background: #ef4444; color: white; font-size: 10px; font-weight: 700; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        
+        .dropdown-box { display: none; position: absolute; top: 40px; right: 0; width: 320px; background: white; border: 1px solid var(--border-color); border-radius: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 16px; z-index: 200; text-align: left; }
+        .dropdown-header { font-size: 13.5px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .dropdown-item { padding: 10px; font-size: 13px; color: var(--text-muted); border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 3px; }
+        .dropdown-item:hover { background: #f8fafc; border-radius: 8px; }
+
+        .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; background: #f1f5f9; padding: 6px 16px 6px 6px; border-radius: 50px; }
+        .user-avatar { width: 32px; height: 32px; background: var(--gradient-light-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+        .user-name { font-weight: 600; font-size: 13.5px; color: var(--text-main); }
+        
+        .dashboard-container { padding: 40px; max-width: 1300px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 30px; }
+        .top-row, .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .card { background: var(--card-bg); border-radius: 28px; border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: transform 0.2s ease; overflow: hidden; }
+        
+        .condition-card { position: relative; isolation: isolate; background: linear-gradient(125deg, #d9f1ff 0%, #a9ddff 35%, #7cc5f7 68%, #a4dcff 100%); color: #12385a; display: flex; align-items: center; padding: 28px 30px 28px 42px; gap: 24px; min-height: 220px; }
+        .weather-icon-container { width: 115px; min-width: 115px; height: 115px; display: flex; align-items: center; justify-content: center; }
+        .weather-icon-large { width: 120px; height: 120px; object-fit: contain; }
+        .weather-info { display: flex; flex-direction: column; gap: 6px; flex: 1; font-family: 'Plus Jakarta Sans', sans-serif; }
+        .weather-info-header { display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 800; text-transform: uppercase; color: #174b70; }
+        .weather-location { font-size: 12px; font-weight: 700; color: #356582; }
+        .weather-vertical-stack { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+        .weather-main-row { display: flex; align-items: baseline; gap: 14px; }
+        .weather-temp { font-size: 42px; font-weight: 800; letter-spacing: -2px; line-height: 1; color: #103b60; }
+        .weather-status { font-size: 13px; font-weight: 800; text-transform: capitalize; color: #174b70; }
+        .weather-subdetails { display: flex; flex-direction: column; gap: 2px; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #315d7a; }
+        .weather-subdetails strong { font-weight: 800; color: #174b70; }
+
+        .combined-stats-card { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .stat-section { 
+            flex: 1; 
+            padding: 35px 40px; 
+            display: flex; 
+            align-items: center; 
+            gap: 20px; 
+            text-decoration: none; 
+            background: #ffffff;
+            transition: all 0.3s ease; 
+            cursor: pointer; 
+        }
+        .stat-section:hover { 
+            background: #f8fafc; 
+        }
+        .stat-section:hover .stat-title,
+        .stat-section:hover .stat-value,
+        .stat-section:hover .stat-subtext {
+            transform: translateY(-4px);
+            color: var(--primary-blue);
+        }
+        .stat-section:hover .stat-icon {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 6px 15px rgba(37, 99, 235, 0.2);
+        }
+        .stat-title, .stat-value, .stat-subtext, .stat-icon {
+            transition: all 0.3s ease;
+        }
+        .stat-divider { width: 1px; height: 60%; background-color: var(--border-color); }
+        .stat-icon { width: 55px; height: 55px; background: #f1f5f9; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--primary-blue); }
+        .stat-content { display: flex; flex-direction: column; gap: 2px; }
+        .stat-title { font-size: 13px; font-weight: 600; color: #64748b; }
+        .stat-value { font-size: 32px; font-weight: 700; color: var(--text-main); }
+        .stat-subtext { font-size: 11px; color: #94a3b8; }
+
+        .map-card { display: flex; flex-direction: column; padding: 30px; }
+        .map-header { margin-bottom: 20px; }
+        .map-header h3 { font-size: 17px; font-weight: 600; color: var(--text-main); }
+        .map-placeholder { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 20px; height: 240px; width: 100%; position: relative; display: flex; justify-content: center; align-items: flex-end; padding: 25px; margin-bottom: 20px; }
+        .wind-bg { background-image: repeating-linear-gradient(45deg, #f1f5f9 25%, transparent 25%, transparent 75%, #f1f5f9 75%, #f1f5f9); background-size: 30px 30px; }
+        .location-bg { background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; }
+        .pin-wrapper { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; }
+        .pin-halo { width: 56px; height: 56px; background: rgba(59, 130, 246, 0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .pin-core { width: 32px; height: 32px; background: var(--gradient-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .pin-core i { color: white; font-size: 16px; }
+        
+        .btn-full { width: 100%; background: var(--gradient-blue); color: white; border: none; padding: 16px; border-radius: 50px; font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 6px 12px rgba(37, 99, 235, 0.25); z-index: 2; text-decoration: none; display: inline-block; text-align: center; transition: all 0.25s ease; }
+        .btn-full:hover { background: var(--gradient-light-blue); transform: translateY(-2px); box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35); }
+        
+        #logoutModal { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-card { background: white; padding: 35px; border-radius: 28px; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--border-color); text-align: center; }
+    </style>
+</head>
+<body>
+    <!-- SECURITY CHECK: Sinisigurong naka-login ang user bago pumasok sa dashboard -->
+    <script>
+        const activeSession = localStorage.getItem('protco_active_session');
+        if (!activeSession) {
+            window.location.href = '/login/';
+        }
+    </script>
+
+    <div class="sidebar">
+        <div class="brand">
+            <div class="brand-icon"><i class="ph-fill ph-shield-check"></i></div>
+            <div class="brand-text">PROTCO<br>System</div>
+        </div>
+        <div class="nav-items">
+            <a href="{% url 'admin_dashboard' %}" class="nav-item active"><i class="ph ph-house"></i> Dashboard</a>
+            <a href="{% url 'reports' %}" class="nav-item"><i class="ph ph-folder-open"></i> Reports</a>
+            <a href="{% url 'users' %}" class="nav-item"><i class="ph ph-users"></i> Users</a>
+            <a href="{% url 'windmap' %}" class="nav-item"><i class="ph ph-wind"></i> Weather Forecast</a>
+            <a href="{% url 'schoolmap' %}" class="nav-item"><i class="ph ph-map-pin"></i> School Map</a>
+            <a href="{% url 'settings' %}" class="nav-item"><i class="ph ph-gear"></i> Settings</a>
+            
+            <button type="button" class="logout-btn" onclick="openLogoutModal()">
+                <i class="ph ph-sign-out"></i> Logout
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <div class="page-title">Dashboard</div>
+            <div class="top-actions">
+                <div class="top-search-box">
+                    <i class="ph ph-magnifying-glass" style="color: var(--text-muted); font-size: 18px;"></i>
+                    <input type="text" placeholder="Quick search dashboard...">
+                </div>
+
+                <div class="top-icons">
+                    <div class="icon-btn" onclick="toggleDropdown('notificationDropdown')">
+                        <i class="ph ph-bell"></i>
+                        <span class="badge-count">2</span>
+                        <div class="dropdown-box" id="notificationDropdown">
+                            <div class="dropdown-header"><span>Notifications</span> <strong style="color:var(--primary-blue); cursor:pointer;">Mark all read</strong></div>
+                            <div class="dropdown-item"><strong>New Damage Report</strong><span>Cawayan Elementary School - Roof #4</span></div>
+                            <div class="dropdown-item"><strong>System Sync</strong><span>Database successfully updated via PostgreSQL.</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="icon-btn" onclick="toggleDropdown('messageDropdown')">
+                        <i class="ph ph-envelope"></i>
+                        <span class="badge-count">1</span>
+                        <div class="dropdown-box" id="messageDropdown">
+                            <div class="dropdown-header"><span>Messages</span> <strong style="color:var(--primary-blue); cursor:pointer;">3 unread</strong></div>
+                            <div class="dropdown-item"><strong>LGU Manito DRRM</strong><span>Please verify the latest structural vulnerability scan.</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-profile">
+                    <div class="user-avatar" id="avatar-initial">
+                        {{ request.user.first_name|default:request.user.username|slice:":1"|upper }}
+                    </div>
+                    <span class="user-name" id="display-name">
+                        {{ request.user.first_name|default:request.user.username }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-container">
+            <div class="top-row">
+                <div class="card condition-card">
+                    <div class="weather-icon-container">
+                        <img id="weather-icon" src="" alt="Weather Condition" class="weather-icon-large">
+                    </div>
+                    <div class="weather-info">
+                        <div class="weather-info-header">
+                            <span>Current Weather</span>
+                            <span id="weather-clock" style="display: inline-flex; align-items: baseline; gap: 4px;">
+                                <span id="clock-main" style="font-size: 15px; font-weight: 800; color: #174b70;">--:--</span>
+                                <span id="clock-sec" style="font-size: 10px; font-weight: 700; color: #356582;">-- --</span>
+                            </span>
+                        </div>
+                        <div class="weather-location" id="weather-city">Manila, Philippines</div>
+                        <div class="weather-vertical-stack">
+                            <div class="weather-main-row">
+                                <div class="weather-temp" id="temperature">--°C</div>
+                                <div class="weather-status" id="weather-description">Loading...</div>
+                            </div>
+                            <div class="weather-subdetails">
+                                <div>Temperature: <strong id="feels-like">--°C</strong></div>
+                                <div>Humidity: <strong id="humidity">--%</strong></div>
+                                <div>Wind: <strong id="wind-speed">-- m/s</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card combined-stats-card">
+                    <a href="{% url 'reports' %}" class="stat-section">
+                        <div class="stat-icon"><i class="ph ph-file-text"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-title">Reports Logged</span>
+                            <span class="stat-value" id="report-count">{{ report_count }}</span>
+                            <span class="stat-subtext">Saved detections</span>
+                        </div>
+                    </a>
+                    <div class="stat-divider"></div>
+                    <a href="{% url 'users' %}" class="stat-section">
+                        <div class="stat-icon"><i class="ph ph-users"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-title">Registered Users</span>
+                            <span class="stat-value" id="user-count">{{ user_count }}</span>
+                            <span class="stat-subtext">Active accounts</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="bottom-row">
+                <div class="card map-card">
+                    <div class="map-header"><h3>Wind Map Forecast</h3></div>
+                    <div class="map-placeholder wind-bg">
+                        <a href="{% url 'windmap' %}" class="btn-full">View Full Forecast</a>
+                    </div>
+                </div>
+                <div class="card map-card">
+                    <div class="map-header"><h3>School Map Location</h3></div>
+                    <div class="map-placeholder location-bg">
+                        <div class="pin-wrapper">
+                            <div class="pin-halo">
+                                <div class="pin-core"><i class="ph-fill ph-map-pin"></i></div>
+                            </div>
+                        </div>
+                        <a href="{% url 'schoolmap' %}" class="btn-full">View Full Map</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGOUT MODAL -->
+    <div id="logoutModal">
+        <div class="modal-card">
+            <div style="width: 55px; height: 55px; background: #eff6ff; color: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 16px;">
+                <i class="ph ph-sign-out"></i>
+            </div>
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">Are you sure you want to log out?</h3>
+            <p style="font-size: 13.5px; color: #64748b; margin-bottom: 25px;">You can always sign back in whenever you're ready.</p>
+            <div style="display: flex; gap: 12px;">
+                <button type="button" onclick="closeLogoutModal()" style="flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; background: white; color: #0f172a; font-weight: 600; cursor: pointer;">Cancel</button>
+                
+                <!-- DIREKTANG MAG-LOGOUT AT LUMIPAT SA LOGIN PAGE -->
+                <button type="button" onclick="executeLogout()" style="flex: 1; padding: 12px; border-radius: 12px; border: none; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; font-weight: 600; cursor: pointer; box-shadow: 0 4px 10px rgba(37,99,235,0.25);">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            const isOpen = dropdown.style.display === 'block';
+            document.querySelectorAll('.dropdown-box').forEach(d => d.style.display = 'none');
+            dropdown.style.display = isOpen ? 'none' : 'block';
+        }
+
+        window.onclick = function(event) {
+            if (!event.target.closest('.icon-btn')) {
+                document.querySelectorAll('.dropdown-box').forEach(d => d.style.display = 'none');
+            }
+        }
+
+        function openLogoutModal() { document.getElementById('logoutModal').style.display = 'flex'; }
+        function closeLogoutModal() { document.getElementById('logoutModal').style.display = 'none'; }
+
+        // Burahin ang active session sa localStorage at direktang pumunta sa login
+        function executeLogout() {
+            localStorage.removeItem('protco_active_session');
+            window.location.href = '/login/';
+        }
+    </script>
+    
+    <script src="{% static 'js/weather.js' %}"></script>
+</body>
+</html>

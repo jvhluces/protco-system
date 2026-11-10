@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROTCO System - Authentication</title>
+    <!-- Phosphor Icons para sa malinis na UI -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary-blue: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; position: relative; }
+        
+        .auth-container { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.02); width: 100%; max-width: 450px; border: 1px solid #e2e8f0; position: relative; }
+        
+        /* Logo Styling */
+        .logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 30px; }
+        .logo-icon { background: var(--primary-blue); color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
+        .logo-text { font-size: 20px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Tabs Styling */
+        .tabs { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: 0.2s; font-size: 15px; }
+        .tab:hover { color: var(--text-main); }
+        .tab.active { color: var(--primary-blue); border-bottom: 3px solid var(--primary-blue); }
+        
+        .form-section { display: none; animation: fadeIn 0.3s ease; }
+        .form-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Inputs Styling */
+        .input-group { margin-bottom: 16px; }
+        .input-row { display: flex; gap: 12px; }
+        .input-row .input-group { flex: 1; }
+        label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+        
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; outline: none; font-size: 14px; transition: 0.2s; color: var(--text-main); background: white; }
+        input[type="text"]:focus, input[type="password"]:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+        .custom-select {
+            position: relative;
+            width: 100%;
+        }
+        .custom-select-trigger {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            color: var(--text-main);
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .custom-select-trigger:hover,
+        .custom-select.open .custom-select-trigger {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .custom-select-value {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .custom-select-arrow {
+            color: var(--text-muted);
+            font-size: 12px;
+            transition: transform 0.2s ease;
+        }
+        .custom-select.open .custom-select-arrow {
+            transform: rotate(180deg);
+        }
+        .custom-select-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            display: none;
+            max-height: 180px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+            z-index: 20;
+        }
+        .custom-select.open .custom-select-menu {
+            display: block;
+        }
+        .custom-select-menu::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-select-menu::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-select-menu::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        .custom-select-menu::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+            border: 2px solid transparent;
+            background-clip: content-box;
+        }
+        .custom-option {
+            width: 100%;
+            border: none;
+            background: white;
+            color: var(--text-main);
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .custom-option:hover,
+        .custom-option.selected {
+            background: #eff6ff;
+            color: var(--primary-blue);
+        }
+
+        /* Custom input para sa +63 prefix */
+        .phone-input-wrapper { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: white; transition: 0.2s; }
+        .phone-input-wrapper:focus-within { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .phone-prefix { background: #f1f5f9; padding: 12px 14px; font-size: 14px; color: #475569; font-weight: 600; border-right: 1px solid var(--border-color); }
+        .phone-input-wrapper input { border: none; border-radius: 0; outline: none; box-shadow: none; }
+        
+        /* Button Styling */
+        .btn { width: 100%; padding: 14px; background: var(--primary-blue); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; transition: 0.2s; margin-top: 10px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 8px rgba(37, 99, 235, 0.3); }
+        .btn:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+        
+        /* Password Meter */
+        .password-meter-container { height: 6px; background: #e2e8f0; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+        .password-meter { height: 100%; width: 0%; transition: width 0.3s ease, background-color 0.3s ease; }
+        .password-text { font-size: 11px; margin-top: 6px; color: var(--text-muted); font-weight: 500; }
+        
+        /* Messages */
+        .error-msg { color: #ef4444; font-size: 12px; margin-top: 10px; display: none; text-align: center; font-weight: 500; background: #fef2f2; padding: 10px; border-radius: 6px; }
+
+        /* Floating Toast Notification (Nasa ilalim ng Card, lumulutang pataas at nag-a-fade) */
+        #toast-notification {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #10b981;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 13.5px;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            white-space: nowrap;
+        }
+        #toast-notification.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+        #toast-notification i {
+            font-size: 16px;
+            color: #10b981;
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-container">
+    <!-- Floating Toast Notification Element (Nasa ilalim ng square) -->
+    <div id="toast-notification">
+        <i class="ph-fill ph-check-circle"></i>
+        <span>Account registered!</span>
+    </div>
+
+    <div class="logo">
+        <div class="logo-icon"><i class="ph-fill ph-shield-check"></i></div>
+        <div class="logo-text">PROTCO System</div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('login')">Login</div>
+        <div class="tab" onclick="switchTab('register')">Register</div>
+    </div>
+
+    <!-- Login Form -->
+    <div id="login-form" class="form-section active">
+        <form onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <label>Contact Number</label>
+                <div class="phone-input-wrapper">
+                    <span class="phone-prefix">+63</span>
+                    <input type="text" id="login-contact" maxlength="10" placeholder="9123456798" required oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="login-password" required placeholder="Enter your password">
+            </div>
+            <div id="login-error" class="error-msg">No account found or incorrect password.</div>
+            <button type="submit" class="btn">Log In</button>
+        </form>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register-form" class="form-section">
+        <form onsubmit="handleRegister(event)">
+            <div class="input-row">
+                <div class="input-group">
+                    <label>First Name</label>
+                    <input type="text" id="reg-first" required placeholder="Juan">
+                </div>
+                <div class="input-group">
+                    <label>Middle Name (Opt)</label>
+                    <input type="text" id="reg-middle" placeholder="Perez">
+                </div>
+            </div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Last Name</label>
+                    <input type="text" id="reg-last" required placeholder="Dela Cruz">
+                </div>
+                <div class="input-group" style="flex: 0.6;">
+                    <label>Suffix (Opt)</label>
+                    <div class="custom-select" id="suffix-select">
+                        <button type="button" class="custom-select-trigger" id="reg-suffix-trigger" aria-expanded="false">
+                            <span class="custom-select-value" id="reg-suffix-label">None</span>
+                            <span class="custom-select-arrow">▾</span>
+                        </button>
+                        <div class="custom-select-menu" id="reg-suffix-menu" role="listbox" aria-label="Suffix options">
+                            <button type="button" class="custom-option selected" data-value="" data-label="None">None</button>
+                            <button type="button" class="custom-option" data-value="Jr." data-label="Jr.">Jr.</button>
+                            <button type="button" class="custom-option" data-value="Sr." data-label="Sr.">Sr.</button>
+                            <button type="button" class="custom-option" data-value="I" data-label="I">I</button>
+                            <button type="button" class="custom-option" data-value="II" data-label="II">II</button>
+                            <button type="button" class="custom-option" data-value="III" data-label="III">III</button>
+                            <button type="button" class="custom-option" data-value="IV" data-label="IV">IV</button>
+                            <button type="button" class="custom-option" data-value="V" data-label="V">V</button>
+                            <button type="button" class="custom-option" data-value="VI" data-label="VI">VI</button>
+                            <button type="button" class="custom-option" data-value="VII" data-label="VII">VII</button>
+                            <button type="button" class="custom-option" data-value="VIII" data-label="VIII">VIII</button>
+                            <button type="button" class="custom-option" data-value="IX" data-label="IX">IX</button>
+                            <button type="button" class="custom-option" data-value="X" data-label="X">X</button>
+                            <button type="button" class="custom-option" data-value="XI" data-label="XI">XI</button>
+                            <button type="button" class="custom-option" data-value="XII" data-label="XII">XII</button>
+                            <button type="button" class="custom-option" data-value="XIII" data-label="XIII">XIII</button>
+                            <button type="button" class="custom-option" data-value="XIV" data-label="XIV">XIV</button>
+                            <button type="button" class="custom-option" data-value="XV" data-label="XV">XV</button>
+                            <button type="button" class="custom-option" data-value="XVI" data-label="XVI">XVI</button>
+                            <button type="button" class="custom-option" data-value="XVII" data-label="XVII">XVII</button>
+                            <button type="button" class="custom-option" data-value="XVIII" data-label="XVIII">XVIII</button>
+                            <button type="button" class="custom-option" data-value="XIX" data-label="XIX">XIX</button>
+                            <button type="button" class="custom-option" data-value="XX" data-label="XX">XX</button>
+                            <button type="button" class="custom-option" data-value="Esq." data-label="Esq.">Esq.</button>
+                            <button type="button" class="custom-option" data-value="M.D." data-label="M.D.">M.D.</button>
+                            <button type="button" class="custom-option" data-value="Ph.D." data-label="Ph.D.">Ph.D.</button>
+                            <button type="button" class="custom-option" data-value="DMD" data-label="DMD">DMD</button>
+                            <button type="button" class="custom-option" data-value="DDS" data-label="DDS">DDS</button>
+                            <button type="button" class="custom-option" data-value="DO" data-label="DO">DO</button>
+                            <button type="button" class="custom-option" data-value="DVM" data-label="DVM">DVM</button>
+                            <button type="button" class="custom-option" data-value="JD" data-label="JD">JD</button>
+                            <button type="button" class="custom-option" data-value="LLD" data-label="LLD">LLD</button>
+                            <button type="button" class="custom-option" data-value="MD" data-label="MD">MD</button>
+                            <button type="button" class="custom-option" data-value="MBA" data-label="MBA">MBA</button>
+                            <button type="button" class="custom-option" data-value="CPA" data-label="CPA">CPA</button>
+                            <button type="button" class="custom-option" data-value="RN" data-label="RN">RN</button>
+                            <button type="button" class="custom-option" data-value="R.N." data-label="R.N.">R.N.</button>
+                            <button type="button" class="custom-option" data-value="BS" data-label="BS">BS</button>
+                            <button type="button" class="custom-option" data-value="B.S." data-label="B.S.">B.S.</button>
+                            <button type="button" class="custom-option" data-value="BA" data-label="BA">BA</button>
+                            <button type="button" class="custom-option" data-value="B.A." data-label="B.A.">B.A.</button>
+                            <button type="button" class="custom-option" data-value="MS" data-label="MS">MS</button>
+                            <button type="button" class="custom-option" data-value="M.S." data-label="M.S.">M.S.</button>
+                            <button type="button" class="custom-option" data-value="MA" data-label="MA">MA</button>
+                            <button type="button" class="custom-option" data-value="M.A." data-label="M.A.">M.A.</button>
+                            <button type="button" class="custom-option" data-value="PhD" data-label="PhD">PhD</button>
+                        </div>
+                        <input type="hidden" id="reg-suffix" value="">
+                    </div>
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Contact Number</label>
+                <div class="phone-input-wrapper">
+                    <span class="phone-prefix">+63</span>
+                    <input type="text" id="reg-contact" maxlength="10" placeholder="9123456798" required oninput="validateContact(this)">
+                </div>
+                <div id="contact-error" style="color: #ef4444; font-size: 11px; display: none; margin-top: 6px; font-weight: 500;">You should start with 9 and have exactly 10 digits.</div>
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="reg-password" onkeyup="checkPasswordStrength()" required placeholder="Create a strong password">
+                <div class="password-meter-container">
+                    <div id="pwd-meter" class="password-meter"></div>
+                </div>
+                <div id="pwd-text" class="password-text">Must be at least 8 characters, including lowercase and uppercase letters, symbols, and numbers.</div>
+            </div>
+            <div id="reg-error" class="error-msg">Please complete the password requirements.</div>
+            <button type="submit" id="reg-btn" class="btn" disabled>Create Account</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function setupCustomSuffix() {
+        const selectWrapper = document.getElementById('suffix-select');
+        const trigger = document.getElementById('reg-suffix-trigger');
+        const menu = document.getElementById('reg-suffix-menu');
+        const hiddenInput = document.getElementById('reg-suffix');
+        const label = document.getElementById('reg-suffix-label');
+        const options = menu.querySelectorAll('.custom-option');
+
+        function closeMenu() {
+            selectWrapper.classList.remove('open');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+
+        trigger.addEventListener('click', function (event) {
+            event.stopPropagation();
+            const isOpen = selectWrapper.classList.contains('open');
+            document.querySelectorAll('.custom-select').forEach(item => item.classList.remove('open'));
+            if (!isOpen) {
+                selectWrapper.classList.add('open');
+                trigger.setAttribute('aria-expanded', 'true');
+            }
+        });
+
+        options.forEach(option => {
+            option.addEventListener('click', function () {
+                const value = this.dataset.value;
+                const text = this.dataset.label;
+                hiddenInput.value = value;
+                label.textContent = text;
+                options.forEach(item => item.classList.toggle('selected', item === this));
+                closeMenu();
+            });
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!selectWrapper.contains(event.target)) {
+                closeMenu();
+            }
+        });
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
+        
+        if(tab === 'login') {
+            document.querySelectorAll('.tab')[0].classList.add('active');
+            document.getElementById('login-form').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.getElementById('register-form').classList.add('active');
+        }
+    }
+
+    let isPasswordValid = false;
+    let isContactValid = false;
+
+    setupCustomSuffix();
+
+    function validateContact(input) {
+        input.value = input.value.replace(/[^0-9]/g, '');
+        const errorMsg = document.getElementById('contact-error');
+        
+        if (input.value.length === 10 && input.value.startsWith('9')) {
+            isContactValid = true;
+            errorMsg.style.display = 'none';
+        } else {
+            isContactValid = false;
+            if (input.value.length > 0) errorMsg.style.display = 'block';
+            else errorMsg.style.display = 'none';
+        }
+        updateRegisterButton();
+    }
+
+    function checkPasswordStrength() {
+        const pwd = document.getElementById('reg-password').value;
+        const meter = document.getElementById('pwd-meter');
+        const text = document.getElementById('pwd-text');
+        
+        let strength = 0;
+        if (pwd.length >= 8) strength += 25;
+        if (/[A-Z]/.test(pwd)) strength += 25;
+        if (/[a-z]/.test(pwd)) strength += 25;
+        if (/[0-9]/.test(pwd) && /[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]/.test(pwd)) strength += 25;
+
+        meter.style.width = strength + '%';
+
+        if (strength <= 50) {
+            meter.style.backgroundColor = '#ef4444';
+            text.innerText = 'Weak: Incomplete requirements (symbols, numbers, big/small letters).';
+            text.style.color = '#ef4444';
+            isPasswordValid = false;
+        } else if (strength < 100) {
+            meter.style.backgroundColor = '#f59e0b';
+            text.innerText = 'Moderate: Add more required characters.';
+            text.style.color = '#f59e0b';
+            isPasswordValid = false;
+        } else {
+            meter.style.backgroundColor = '#10b981';
+            text.innerText = 'Strong: Requirements Completed!';
+            text.style.color = '#10b981';
+            isPasswordValid = true;
+        }
+        updateRegisterButton();
+    }
+
+    function updateRegisterButton() {
+        const btn = document.getElementById('reg-btn');
+        btn.disabled = !(isPasswordValid && isContactValid);
+    }
+
+    // Function para sa Floating Toast Notification sa ibaba ng card
+    function showToast() {
+        const toast = document.getElementById('toast-notification');
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2200);
+    }
+
+    function handleRegister(e) {
+        e.preventDefault();
+
+        const user = {
+            firstName: document.getElementById('reg-first').value,
+            middleName: document.getElementById('reg-middle').value,
+            lastName: document.getElementById('reg-last').value,
+            suffix: document.getElementById('reg-suffix').value,
+            contact: document.getElementById('reg-contact').value,
+            password: document.getElementById('reg-password').value,
+            role: 'Admin'
+        };
+
+        // I-save sa Local Storage
+        localStorage.setItem('protco_user_' + user.contact, JSON.stringify(user));
+
+        // Mag-pop up ang floating notification sa ilalim ng card
+        showToast();
+
+        // I-reset ang form at ilipat agad sa Login tab
+        document.getElementById('register-form').querySelector('form').reset();
+        document.getElementById('reg-suffix').value = '';
+        document.getElementById('reg-suffix-label').textContent = 'None';
+        document.querySelectorAll('#reg-suffix-menu .custom-option').forEach(opt => opt.classList.toggle('selected', opt.dataset.value === ''));
+        document.getElementById('suffix-select').classList.remove('open');
+        isPasswordValid = false;
+        isContactValid = false;
+        updateRegisterButton();
+        document.getElementById('pwd-meter').style.width = '0%';
+        document.getElementById('pwd-text').innerText = 'Must be at least 8 characters, including lowercase and uppercase letters, symbols, and numbers.';
+        document.getElementById('pwd-text').style.color = '#64748b';
+
+        document.getElementById('login-contact').value = user.contact;
+        switchTab('login');
+        document.getElementById('login-password').focus();
+    }
+
+    function handleLogin(e) {
+        e.preventDefault();
+        const contact = document.getElementById('login-contact').value;
+        const pass = document.getElementById('login-password').value;
+        const errorMsg = document.getElementById('login-error');
+
+        const savedUser = localStorage.getItem('protco_user_' + contact);
+        
+        if (savedUser) {
+            const userData = JSON.parse(savedUser);
+            if (userData.password === pass) {
+                localStorage.setItem('protco_active_session', JSON.stringify(userData));
+                
+                // IWASAN ANG 404: Gumamit ng tamang absolute Django path patungo sa dashboard
+                window.location.href = '/dashboard/';
+                return;
+            }
+        }
+        
+        errorMsg.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
