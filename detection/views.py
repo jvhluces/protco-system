@@ -18,6 +18,11 @@ from ultralytics import YOLO
 
 from .models import DetectionResult
 
+from django.shortcuts import render
+from django.conf import settings
+# Kung mayroon kang function na nagkuha ng weather — i-import mo rin
+# from .utils import get_current_weather, get_weather_forecast
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,7 +69,7 @@ def _safe_icon(icon):
 
 
 def get_current_weather(location=None):
-    location = location or getattr(settings, "OPENWEATHER_CITY", "Manila,PH")
+    location = location or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
     data, error = _fetch_openweather("weather", location)
     if error:
         return None, error
@@ -128,21 +133,32 @@ def get_weather_forecast(location):
 
 
 def weather_forecast(request):
-    location = getattr(settings, "OPENWEATHER_CITY", "Manila,PH")
+    # Kunin muna ang galing sa search bar, kung wala → default
+    location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
+    
     weather, weather_error = get_current_weather(location)
     forecast, forecast_error = get_weather_forecast(location)
+    
+    return render(request, "detection/weather_forecast.html", {
+        "weather": weather,
+        "forecast": forecast or [],
+        "weather_error": weather_error,
+        "forecast_error": forecast_error,
+        "location": location,  # ← Ipakita sa input box ang hinanap
+    })
 
-    return render(
-        request,
-        "detection/weather_forecast.html",
-        {
-            "weather": weather,
-            "forecast": forecast or [],
-            "weather_error": weather_error,
-            "forecast_error": forecast_error,
-            "city": location,
-        },
-    )
+def damage_check(request):
+    # Kunin mula sa search bar, kung wala → gamitin ang default
+    location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
+    
+    weather, weather_error = get_current_weather(location)
+    
+    return render(request, "detection/damage_check.html", {
+        "weather": weather,
+        "weather_error": weather_error,
+        "location": location,  # ← Ipakita sa input box
+    })
+
 
 
 # =====================================================================
@@ -451,9 +467,6 @@ Use 2-5 useful list items where appropriate. Keep the language clear and specifi
         }
 
 
-# =====================================================================
-# DASHBOARD + DAMAGE CHECK  (iisang view, dalawang URL)
-# =====================================================================
 ALLOWED_DAMAGE_KEYWORDS = [
     "crack", "spall", "peeling", "paint", "rust", "corrosion", "broken",
     "damage", "dent", "hole", "leak", "loose", "collapse", "tilt", "sagging",
@@ -667,3 +680,5 @@ def delete_report(request, report_id):
     report.delete()
     messages.success(request, f"Report #{report_pk} was deleted.")
     return redirect("detection:reports")
+
+
