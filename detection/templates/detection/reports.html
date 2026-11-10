@@ -1,0 +1,248 @@
+{% extends "detection/base.html" %}
+
+{# Filter na lalabas sa top nav bar kasabay ng search box kapag pinindot ang search icon #}
+{% block topbar_filter %}
+<select id="statusFilter" class="tb-field" aria-label="Filter by status">
+    <option value="all">All statuses</option>
+    <option value="pending">Pending</option>
+    <option value="submitted">Submitted</option>
+    <option value="failed">Failed / Invalid</option>
+</select>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* === REPORTS PAGE === */
+    .rp-header {
+        display: flex; align-items: flex-end; justify-content: space-between;
+        gap: 1rem; flex-wrap: wrap;
+        padding-bottom: 1.25rem; border-bottom: 1px solid var(--border);
+    }
+    .rp-title { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; }
+    .rp-subtitle { margin: 0.35rem 0 0; font-size: 0.92rem; color: var(--muted); }
+    .rp-actions { display: flex; align-items: center; gap: 1rem; }
+    .rp-count { font-size: 0.85rem; color: var(--muted); }
+
+    .btn-primary {
+        display: inline-flex; align-items: center; gap: 0.45rem;
+        padding: 0.65rem 1.15rem; background: var(--blue); color: #fff;
+        border: 0; border-radius: 10px; font-size: 0.9rem; font-weight: 600;
+        cursor: pointer; transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #1f66c4; }
+    .btn-primary:focus-visible, .btn-outline:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+    /* Grid */
+    .rp-grid {
+        display: grid; gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+    .rp-card {
+        display: flex; flex-direction: column;
+        background: #fff; border: 1px solid var(--border); border-radius: 16px;
+        overflow: hidden; box-shadow: var(--card-shadow);
+        transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .rp-card:hover { box-shadow: 0 8px 28px rgba(20, 43, 73, 0.12); border-color: #d5deea; }
+
+    .rp-media { position: relative; height: 190px; background: #eef2f8; }
+    .rp-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .rp-media.no-image { display: grid; place-items: center; color: #a9b6c8; font-size: 0.85rem; }
+    .rp-id {
+        position: absolute; top: 12px; left: 12px;
+        padding: 0.25rem 0.6rem; border-radius: 8px;
+        background: rgba(20, 43, 73, 0.82); color: #fff;
+        font-family: monospace; font-size: 0.8rem; font-weight: 700;
+    }
+    .status-pill {
+        position: absolute; top: 12px; right: 12px;
+        padding: 0.25rem 0.75rem; border-radius: 999px;
+        font-size: 0.78rem; font-weight: 600; background: #fff;
+    }
+    .status-pill.pending   { background: #fef3c7; color: #92400e; }
+    .status-pill.submitted { background: #d1fae5; color: #065f46; }
+    .status-pill.failed    { background: #fee2e2; color: #991b1b; }
+
+    .rp-body { padding: 1.1rem 1.25rem 0.5rem; flex: 1; }
+    .rp-damage { margin: 0 0 0.75rem; font-size: 1.05rem; font-weight: 700; color: var(--navy); }
+    .rp-details { margin: 0; }
+    .rp-row {
+        display: flex; justify-content: space-between; gap: 1rem;
+        padding: 0.6rem 0; border-top: 1px solid #f0f3f8; font-size: 0.88rem;
+    }
+    .rp-row dt { margin: 0; color: var(--muted); font-weight: 500; white-space: nowrap; }
+    .rp-row dd { margin: 0; color: var(--text); text-align: right; max-width: 62%; overflow-wrap: anywhere; }
+
+    .rp-footer { padding: 0.9rem 1.25rem 1.1rem; }
+    .btn-outline {
+        display: block; width: 100%; text-align: center;
+        padding: 0.6rem 1rem; border: 1px solid #cdd7e4; border-radius: 10px;
+        color: var(--navy); font-size: 0.88rem; font-weight: 600;
+        transition: all 0.2s;
+    }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
+    /* Empty / no-result states */
+    .rp-empty { text-align: center; padding: 4rem 2rem; color: var(--muted); }
+    .rp-empty h3 { margin: 0.5rem 0; color: var(--navy); }
+    .rp-empty p { margin: 0 0 1.25rem; }
+    #noResults { display: none; background: #fff; border: 1px dashed #cdd7e4; border-radius: 16px; }
+
+    /* Pagination */
+    .pagination { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+    .pagination a, .pagination span {
+        padding: 0.5rem 0.95rem; border-radius: 8px; font-size: 0.88rem; font-weight: 500;
+    }
+    .pagination a { border: 1px solid var(--border); background: #fff; color: var(--blue); }
+    .pagination a:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .pagination .current { background: var(--blue); color: #fff; border: 1px solid var(--blue); }
+    .pagination .disabled { color: #b8c3d3; border: 1px solid #f0f3f8; background: #fff; cursor: not-allowed; }
+
+    @media (max-width: 600px) {
+        .rp-grid { grid-template-columns: 1fr; }
+        .rp-actions { width: 100%; justify-content: space-between; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="rp-header">
+    <div>
+        <h2 class="rp-title">Damage Reports</h2>
+        <p class="rp-subtitle">List of all submitted facility damage reports</p>
+    </div>
+    <div class="rp-actions">
+        <span class="rp-count" id="resultCount" aria-live="polite"></span>
+        <a href="{% url 'detection:damage_check' %}" class="btn-primary">+ New Report</a>
+    </div>
+</header>
+
+{% if reports %}
+<section class="rp-grid" id="reportsGrid">
+    {% for report in reports %}
+    <article class="rp-card" data-status="{{ report.status_class }}">
+        <div class="rp-media {% if not report.image %}no-image{% endif %}">
+            {% if report.image %}
+                <img src="{{ report.image.url }}" alt="Photo for report #{{ report.id }}" loading="lazy">
+            {% else %}
+                No image
+            {% endif %}
+            <span class="rp-id">#{{ report.id }}</span>
+            <span class="status-pill {{ report.status_class }}">{{ report.status_text }}</span>
+        </div>
+
+        <div class="rp-body">
+            <h3 class="rp-damage">{{ report.damage_type }}</h3>
+            <dl class="rp-details">
+                <div class="rp-row">
+                    <dt>Location</dt>
+                    <dd>{{ report.location|default:"Not specified" }}</dd>
+                </div>
+                <div class="rp-row">
+                    <dt>Submitted</dt>
+                    <dd>{{ report.created_at|date:"F j, Y g:i A" }}</dd>
+                </div>
+                <div class="rp-row">
+                    <dt>Confidence</dt>
+                    <dd>{% if report.confidence %}{{ report.confidence|floatformat:1 }}%{% else %}—{% endif %}</dd>
+                </div>
+                {% if report.weather %}
+                <div class="rp-row">
+                    <dt>Weather</dt>
+                    <dd>{{ report.weather.description }}, {{ report.weather.temp }}°C</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+
+        <div class="rp-footer">
+            <a href="{% url 'detection:report_detail' report.id %}" class="btn-outline">View details</a>
+        </div>
+    </article>
+    {% endfor %}
+</section>
+
+<div class="rp-empty" id="noResults">
+    <h3>No matching reports</h3>
+    <p>Try a different keyword or status in the top search bar.</p>
+</div>
+
+{% if is_paginated %}
+<nav class="pagination" aria-label="Pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page=1{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">&laquo; First</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+    {% else %}
+        <span class="disabled">&laquo; First</span>
+        <span class="disabled">Previous</span>
+    {% endif %}
+
+    <span class="current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last &raquo;</a>
+    {% else %}
+        <span class="disabled">Next</span>
+        <span class="disabled">Last &raquo;</span>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+<div class="rp-empty">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="width:64px;height:64px;opacity:0.3;">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+    <h3>No reports yet</h3>
+    <p>Upload an image of facility damage to create your first report.</p>
+    <a href="{% url 'detection:damage_check' %}" class="btn-primary">Upload first report</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const input  = document.getElementById('searchInput');   // galing sa top nav (base.html)
+    const select = document.getElementById('statusFilter');  // galing sa top nav (block topbar_filter)
+    const cards  = Array.from(document.querySelectorAll('.rp-card'));
+    const count  = document.getElementById('resultCount');
+    const noRes  = document.getElementById('noResults');
+    if (!input || !select || !cards.length) return;
+
+    input.placeholder = 'Search by location or type…';
+
+    function applyFilters() {
+        const status = select.value;
+        const query  = input.value.trim().toLowerCase();
+        let visible = 0;
+
+        cards.forEach(card => {
+            const okStatus = status === 'all' || card.dataset.status === status;
+            const okSearch = !query || card.textContent.toLowerCase().includes(query);
+            const show = okStatus && okSearch;
+            card.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        count.textContent = 'Showing ' + visible + ' of ' + cards.length + ' reports';
+        noRes.style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    input.addEventListener('input', applyFilters);
+    select.addEventListener('change', applyFilters);
+
+    // Kung may ?status= o ?search= sa URL, i-apply at buksan ang search bar
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('search')) input.value = params.get('search');
+    if (params.get('status') && select.querySelector('option[value="' + params.get('status') + '"]')) {
+        select.value = params.get('status');
+    }
+    if (input.value || select.value !== 'all') setSearchOpen(true);
+
+    applyFilters();
+})();
+</script>
+{% endblock %}

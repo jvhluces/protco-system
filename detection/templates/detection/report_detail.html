@@ -1,0 +1,238 @@
+{% extends "detection/base.html" %}
+
+{% block extra_css %}
+<style>
+    /* === REPORT DETAIL PAGE === */
+    .rd-header {
+        display: flex; align-items: flex-end; justify-content: space-between;
+        gap: 1rem; flex-wrap: wrap;
+        padding-bottom: 1.25rem; border-bottom: 1px solid var(--border);
+    }
+    .rd-back {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        font-size: 0.85rem; font-weight: 600; color: var(--blue);
+        margin-bottom: 0.6rem;
+    }
+    .rd-back:hover { text-decoration: underline; }
+    .rd-title-row { display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap; }
+    .rd-title { margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; }
+    .rd-subtitle { margin: 0.35rem 0 0; font-size: 0.92rem; color: var(--muted); }
+
+    .status-pill {
+        padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.78rem; font-weight: 600;
+    }
+    .status-pill.pending   { background: #fef3c7; color: #92400e; }
+    .status-pill.submitted { background: #d1fae5; color: #065f46; }
+    .status-pill.failed    { background: #fee2e2; color: #991b1b; }
+
+    .btn-danger {
+        display: inline-flex; align-items: center; gap: 0.45rem;
+        padding: 0.65rem 1.15rem; background: #fff; color: #b42323;
+        border: 1.5px solid #f0c4c4; border-radius: 10px;
+        font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-danger:hover { background: #dc4c4c; border-color: #dc4c4c; color: #fff; }
+    .btn-danger-solid {
+        padding: 0.65rem 1.15rem; background: #dc4c4c; color: #fff; border: 0;
+        border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-danger-solid:hover { background: #c23a3a; }
+    .btn-ghost {
+        padding: 0.65rem 1.15rem; background: #fff; color: var(--navy);
+        border: 1px solid #cdd7e4; border-radius: 10px;
+        font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-ghost:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-danger:focus-visible, .btn-danger-solid:focus-visible, .btn-ghost:focus-visible {
+        outline: 2px solid var(--blue); outline-offset: 2px;
+    }
+
+    /* Layout: image sa kaliwa, details sa kanan */
+    .rd-grid {
+        display: grid; gap: 1.5rem; align-items: start;
+        grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    }
+    .rd-panel {
+        background: #fff; border: 1px solid var(--border); border-radius: 16px;
+        box-shadow: var(--card-shadow); overflow: hidden;
+    }
+    .rd-panel-head {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: 1rem 1.25rem; border-bottom: 1px solid #f0f3f8;
+    }
+    .rd-panel-title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--navy); }
+
+    .rd-tabs { display: inline-flex; background: #eef2f8; border-radius: 10px; padding: 3px; }
+    .rd-tab {
+        border: 0; background: transparent; padding: 0.35rem 0.85rem; border-radius: 8px;
+        font-size: 0.8rem; font-weight: 600; color: var(--muted); cursor: pointer;
+    }
+    .rd-tab.active { background: #fff; color: var(--blue); box-shadow: 0 1px 3px rgba(20, 43, 73, 0.12); }
+
+    .rd-media { background: #eef2f8; display: grid; place-items: center; min-height: 280px; }
+    .rd-media img { display: block; width: 100%; max-height: 560px; object-fit: contain; }
+    .rd-no-image { color: #a9b6c8; font-size: 0.9rem; padding: 3rem 1rem; }
+
+    .rd-body { padding: 0.5rem 1.25rem 1.25rem; }
+    .rd-row {
+        display: flex; justify-content: space-between; gap: 1.25rem;
+        padding: 0.85rem 0; border-bottom: 1px solid #f0f3f8; font-size: 0.92rem;
+    }
+    .rd-row:last-child { border-bottom: 0; }
+    .rd-row dt { margin: 0; color: var(--muted); font-weight: 500; white-space: nowrap; }
+    .rd-row dd { margin: 0; color: var(--text); text-align: right; overflow-wrap: anywhere; font-weight: 600; }
+
+    .rd-conf { padding: 1rem 0 0.5rem; }
+    .rd-conf-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+    .rd-conf-label { font-size: 0.85rem; color: var(--muted); font-weight: 500; }
+    .rd-conf-value { font-size: 1.6rem; font-weight: 700; color: var(--navy); letter-spacing: -0.02em; }
+    .rd-bar { height: 8px; border-radius: 999px; background: #e8eef7; overflow: hidden; }
+    .rd-bar span { display: block; height: 100%; border-radius: 999px; background: var(--blue); }
+
+    .rd-actions {
+        display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: space-between;
+        padding: 1rem 1.25rem 1.25rem; border-top: 1px solid #f0f3f8;
+    }
+
+    /* Confirm dialog */
+    .rd-dialog {
+        border: 0; border-radius: 16px; padding: 0; max-width: 420px; width: calc(100% - 2rem);
+        box-shadow: 0 24px 60px rgba(20, 43, 73, 0.3); color: var(--text);
+    }
+    .rd-dialog::backdrop { background: rgba(16, 34, 59, 0.55); }
+    .rd-dialog-body { padding: 1.5rem 1.5rem 1rem; }
+    .rd-dialog h3 { margin: 0 0 0.5rem; font-size: 1.15rem; color: var(--navy); }
+    .rd-dialog p { margin: 0; font-size: 0.92rem; line-height: 1.55; color: var(--muted); }
+    .rd-dialog-actions { display: flex; justify-content: flex-end; gap: 0.6rem; padding: 1rem 1.5rem 1.25rem; }
+
+    @media (max-width: 1000px) {
+        .rd-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="rd-header">
+    <div>
+        <a class="rd-back" href="{% url 'detection:reports' %}">&larr; Back to reports</a>
+        <div class="rd-title-row">
+            <h2 class="rd-title">Report #{{ report.id }}</h2>
+            <span class="status-pill {{ status_class }}">{{ status_text }}</span>
+        </div>
+        <p class="rd-subtitle">Submitted {{ report.created_at|date:"F j, Y g:i A" }}</p>
+    </div>
+    <button type="button" class="btn-danger" id="openDelete">Delete report</button>
+</header>
+
+<div class="rd-grid">
+
+    <!-- LEFT: LARAWAN -->
+    <section class="rd-panel">
+        <div class="rd-panel-head">
+            <h3 class="rd-panel-title">Image</h3>
+            {% if report.image and report.detected_image %}
+            <div class="rd-tabs" role="tablist" aria-label="Image view">
+                <button type="button" class="rd-tab active" role="tab" data-src="{{ report.detected_image.url }}" aria-selected="true">Detected</button>
+                <button type="button" class="rd-tab" role="tab" data-src="{{ report.image.url }}" aria-selected="false">Original</button>
+            </div>
+            {% endif %}
+        </div>
+        <div class="rd-media">
+            {% if report.detected_image %}
+                <img id="rdImage" src="{{ report.detected_image.url }}" alt="Detected damage for report #{{ report.id }}">
+            {% elif report.image %}
+                <img id="rdImage" src="{{ report.image.url }}" alt="Photo for report #{{ report.id }}">
+            {% else %}
+                <div class="rd-no-image">No image available</div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- RIGHT: DETAILS -->
+    <section class="rd-panel">
+        <div class="rd-panel-head">
+            <h3 class="rd-panel-title">Report details</h3>
+        </div>
+        <div class="rd-body">
+            <div class="rd-conf">
+                <div class="rd-conf-top">
+                    <span class="rd-conf-label">YOLO confidence</span>
+                    <span class="rd-conf-value">{% if confidence_pct %}{{ confidence_pct|floatformat:1 }}%{% else %}&mdash;{% endif %}</span>
+                </div>
+                <div class="rd-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ confidence_pct|floatformat:0 }}">
+                    <span style="width: {{ confidence_pct|floatformat:0 }}%"></span>
+                </div>
+            </div>
+
+            <dl style="margin:0">
+                <div class="rd-row">
+                    <dt>Damage type</dt>
+                    <dd>{{ report.damage_type|default:"Unspecified Damage" }}</dd>
+                </div>
+                <div class="rd-row">
+                    <dt>Location</dt>
+                    <dd>{{ location }}</dd>
+                </div>
+                <div class="rd-row">
+                    <dt>Status</dt>
+                    <dd>{{ status_text }}</dd>
+                </div>
+                <div class="rd-row">
+                    <dt>Submitted</dt>
+                    <dd>{{ report.created_at|date:"F j, Y g:i A" }}</dd>
+                </div>
+                <div class="rd-row">
+                    <dt>Report ID</dt>
+                    <dd>#{{ report.id }}</dd>
+                </div>
+            </dl>
+        </div>
+        <div class="rd-actions">
+            <a class="btn-ghost" href="{% url 'detection:reports' %}">&larr; Back to reports</a>
+            <button type="button" class="btn-danger" id="openDeleteBottom">Delete report</button>
+        </div>
+    </section>
+</div>
+
+<!-- Confirm delete -->
+<dialog class="rd-dialog" id="deleteDialog" aria-labelledby="deleteTitle">
+    <div class="rd-dialog-body">
+        <h3 id="deleteTitle">Delete report #{{ report.id }}?</h3>
+        <p>This will permanently remove the report and its images from the system. This action cannot be undone.</p>
+    </div>
+    <form method="post" action="{% url 'detection:delete_report' report.id %}" class="rd-dialog-actions">
+        {% csrf_token %}
+        <button type="button" class="btn-ghost" id="cancelDelete">Cancel</button>
+        <button type="submit" class="btn-danger-solid">Yes, delete</button>
+    </form>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    // Delete confirmation dialog
+    const dialog = document.getElementById('deleteDialog');
+    ['openDelete', 'openDeleteBottom'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.addEventListener('click', () => dialog.showModal());
+    });
+    document.getElementById('cancelDelete').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
+
+    // Detected / Original image toggle
+    const img = document.getElementById('rdImage');
+    document.querySelectorAll('.rd-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.rd-tab').forEach(t => {
+                t.classList.remove('active');
+                t.setAttribute('aria-selected', 'false');
+            });
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
+            if (img) img.src = tab.dataset.src;
+        });
+    });
+})();
+</script>
+{% endblock %}

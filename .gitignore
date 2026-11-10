@@ -1,0 +1,27 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Secrets
+.env
+core/.env
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+
+# Media / Uploaded files
+media/
+
+# Migrations cache
+detection/migrations/__pycache__/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

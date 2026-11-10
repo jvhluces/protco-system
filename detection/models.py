@@ -1,15 +1,17 @@
 from django.db import models
+from django.utils import timezone
 
-class DamageReport(models.Model):
-    image = models.ImageField(upload_to='damage_reports/original/')
-    detected_image = models.ImageField(upload_to='damage_reports/detected/', blank=True, null=True)
-    damage_type = models.CharField(max_length=200, default="Pending Analysis")
-    confidence = models.FloatField(default=0.0)
-    created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        ordering = ["-created_at"]  # Newest first automatically
+class DetectionResult(models.Model):
+    image = models.ImageField(upload_to="detections/original/")
+    detected_image = models.ImageField(
+        upload_to="detections/detected/",
+        blank=True,
+        null=True,
+    )
+    damage_type = models.CharField(max_length=255, blank=True, null=True)
+    confidence = models.FloatField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        display = self.damage_type or "Report"
-        return f"{display} — {self.created_at.strftime('%Y-%m-%d %H:%M')}"
+        return f"Detection {self.id} - {self.damage_type or 'Pending'}"
