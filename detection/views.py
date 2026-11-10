@@ -583,12 +583,10 @@ def upload_and_detect(request):
                 report.confidence = 0.0
                 report.save()
                 error_message = "Image analysis failed. Check the Django terminal for details."
-
-            # Nasa labas ng try/except para laging may "latest" (success man o hindi)
-            latest = report
-            previous_similar_count = count_previous_similar_reports(
-                latest, DetectionResult.objects.exclude(pk=latest.pk)
-            )
+        latest = report
+        previous_similar_count = count_previous_similar_reports(
+            latest, DetectionResult.objects.exclude(pk=latest.pk)
+        )
 
     return render(
         request,
@@ -601,15 +599,23 @@ def upload_and_detect(request):
             "weather": weather,
             "weather_error": weather_error,
             "can_submit_report": _can_submit(latest),
+            "location": location,
         },
     )
 
+
+                
+
+           
+    
 
 # =====================================================================
 # REPORTS
 # =====================================================================
 def reports_list(request):
+    location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
     all_reports = DetectionResult.objects.all().order_by("-created_at")
+
 
     reports_data = []
     for r in all_reports:
@@ -625,7 +631,7 @@ def reports_list(request):
             {
                 "id": r.id,
                 "damage_type": damage or "Unspecified Damage",
-                "location": getattr(r, "location", None) or "Manito, Albay",
+                "location": getattr(r, "location", None) or location,
                 "created_at": r.created_at,
                 "confidence": (r.confidence or 0) * 100,
                 "image": r.image,
@@ -647,7 +653,9 @@ def _report_status(damage):
 
 
 def report_detail(request, report_id):
+    location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
     report = get_object_or_404(DetectionResult, id=report_id)
+
     status_class, status_text = _report_status(report.damage_type)
 
     return render(
@@ -658,7 +666,7 @@ def report_detail(request, report_id):
             "status_class": status_class,
             "status_text": status_text,
             "confidence_pct": (report.confidence or 0) * 100,
-            "location": getattr(report, "location", None) or "Manito, Albay",
+            "location": getattr(report, "location", None) or location,
         },
     )
 
@@ -682,3 +690,50 @@ def delete_report(request, report_id):
     return redirect("detection:reports")
 
 
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+
+#@login_required
+def settings_view(request):
+    """Display and handle user/system settings for the teacher dashboard"""
+    
+    # Current settings values - can later be saved to User profile
+    context = {
+        "page_title": "Settings",
+        "settings": {
+            "dashboard_refresh_rate": "5",  # minutes
+            "default_risk_view": "all",
+            "notifications_enabled": True,
+            "email_alerts": True,
+            "low_confidence_visibility": False,
+            "items_per_page": "10",
+            "timezone": "Asia/Manila",
+        }
+    }
+
+    if request.method == "POST":
+        # Get values from form
+        dashboard_refresh = request.POST.get("dashboard_refresh_rate", "5")
+        default_view = request.POST.get("default_risk_view", "all")
+        notifications = request.POST.get("notifications_enabled") == "on"
+        email_alerts = request.POST.get("email_alerts") == "on"
+        show_low_confidence = request.POST.get("low_confidence_visibility") == "on"
+        items_per_page = request.POST.get("items_per_page", "10")
+        timezone = request.POST.get("timezone", "Asia/Manila")
+
+        # Save to session for now (later you can store in User profile)
+        request.session["dashboard_refresh_rate"] = dashboard_refresh
+        request.session["default_risk_view"] = default_view
+        request.session["notifications_enabled"] = notifications
+        request.session["email_alerts"] = email_alerts
+        request.session["low_confidence_visibility"] = show_low_confidence
+        request.session["items_per_page"] = items_per_page
+        request.session["timezone"] = timezone
+
+        messages.success(request, "Settings saved successfully! ✅")
+        return redirect("settings")
+
+    return render(request, "detection/settings.html", context)
+# Kung sa detection/templates/detection/ mo nilagay

@@ -201,10 +201,7 @@
         <a class="nav-link {% if current_page == 'weather' %}active{% endif %}" href="{{ weather_url }}">
             <svg class="ic"><use href="#i-cloud"/></svg> Weather &amp; Forecast
         </a>
-        <a class="nav-link" href="{{ dashboard_url }}#risk-summary">
-            <svg class="ic"><use href="#i-building"/></svg>
-            Infrastructure
-        </a>
+      
         <a class="nav-link {% if current_page == 'reports' %}active{% endif %}" href="{{ reports_url }}">
             <svg class="ic"><use href="#i-file"/></svg> Reports
         </a>
@@ -213,13 +210,18 @@
             <svg class="ic"><use href="#i-camera"/></svg>
             Damage Check
         </a>
-        <a class="nav-link" href="#settings">
-            <svg class="ic"><use href="#i-gear"/></svg> Settings
-        </a>
+        <a class="nav-link {% if current_page == 'settings' or request.resolver_match.url_name == 'settings' %}active{% endif %}"
+   href="{% url 'detection:settings' %}">
+    <svg class="ic" viewBox="0 0 24 24">
+        <use href="#i-gear"/>
+    </svg>
+    <span>Settings</span>
+</a>
+
 
         <div class="sidebar-bottom">
             <a class="nav-link" href="#support">
-                <svg class="ic"><use href="#i-support"/></svg> Support
+                <svg class="ic"><use href="#i-support"/></svg> Logout
             </a>
         </div>
     </aside>

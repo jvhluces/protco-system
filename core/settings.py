@@ -20,7 +20,7 @@ print(f"📂 .env path: {env_path} — exists: {env_path.exists()}")
 
 # --- Weather API ---
 OPENWEATHER_API_KEY = os.environ.get("OPENWEATHER_API_KEY", "").strip()
-OPENWEATHER_CITY = os.environ.get("OPENWEATHER_CITY", "Manila,PH").strip()
+OPENWEATHER_CITY = os.environ.get("OPENWEATHER_CITY", "Manito,PH").strip()
 
 # --- Gemini AI ---
 # ✅ Tama ang model name — gemini-3.8-flash ay valid 

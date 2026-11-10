@@ -1,3 +1,4 @@
+
 {% extends "detection/base.html" %}
 
 {% block extra_css %}
@@ -42,10 +43,17 @@
         gap: 22px;
     }
 
+    /* Two remaining dashboard cards */
     .trio {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 22px;
+        align-items: stretch;
+    }
+
+    .trio > .card {
+        min-width: 0;
+        height: 100%;
     }
 
     .bottom {
@@ -197,7 +205,7 @@
     /* MAP PREVIEW */
     .map-thumb {
         position: relative;
-        height: 170px;
+        height: 190px;
         margin: 20px 0;
         border-radius: 18px;
         overflow: hidden;
@@ -512,20 +520,29 @@
 
     /* RESPONSIVE */
     @media (max-width: 1250px) {
-        .hero, .bottom { grid-template-columns: 1fr; }
+        .hero,
+        .bottom {
+            grid-template-columns: 1fr;
+        }
 
         .trio {
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-
-        .trio .check-card {
-            order: -1;
-            grid-column: 1 / -1;
-        }
     }
 
-    @media (max-width: 640px) {
-        .trio { grid-template-columns: 1fr; }
+    @media (max-width: 760px) {
+        .hero,
+        .trio,
+        .bottom {
+            grid-template-columns: 1fr;
+        }
+
+        .weather-card {
+            flex-wrap: wrap;
+            padding: 22px;
+        }
+
+        .temp { font-size: 46px; }
 
         .stats-card {
             grid-template-columns: 1fr;
@@ -538,12 +555,9 @@
             padding-top: 14px;
         }
 
-        .weather-card {
-            flex-wrap: wrap;
-            padding: 22px;
+        .map-thumb {
+            height: 170px;
         }
-
-        .temp { font-size: 46px; }
     }
 </style>
 {% endblock %}
@@ -655,7 +669,7 @@
 </section>
 
 
-<!-- DASHBOARD CARDS -->
+<!-- DASHBOARD CARDS: WEATHER AND DAMAGE CHECK -->
 <section class="trio">
 
     <!-- WEATHER -->
@@ -719,40 +733,6 @@
             <a class="btn-pill" href="{% url 'detection:damage_check' %}">
                 Start Inspection
             </a>
-        </div>
-    </article>
-
-
-    <!-- SCHOOL MAP -->
-    <article class="card" id="school-map">
-        <div class="card-head">
-            <h2>School Map &amp;<br>Infrastructure Status</h2>
-
-            <button class="collapse-btn" type="button" aria-label="Collapse">
-                <svg class="ic"><use href="#i-chevron"/></svg>
-            </button>
-        </div>
-
-        <div class="card-body">
-            <div class="map-thumb">
-                <span class="park" style="left:46%;top:6%;width:30%;height:26%"></span>
-                <span class="park" style="left:6%;bottom:8%;width:22%;height:30%"></span>
-                <span class="park" style="right:6%;top:40%;width:16%;height:22%"></span>
-                <span class="ring"></span>
-
-                <span class="pin">
-                    <svg class="ic"><use href="#i-pin"/></svg>
-                </span>
-
-                <span class="spot" style="left:34%;top:26%;background:#2fa56a"></span>
-                <span class="spot" style="left:78%;top:70%;background:var(--orange)"></span>
-
-                <span class="caption">
-                    Illustrative campus · location not configured
-                </span>
-            </div>
-
-            <a class="btn-pill" href="#school-map">View Full Map</a>
         </div>
     </article>
 

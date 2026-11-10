@@ -1,0 +1,533 @@
+```django
+{% extends "detection/base.html" %}
+
+{% block extra_css %}
+<style>
+    /* ==============================
+       SETTINGS PAGE
+    ============================== */
+
+    .settings-page {
+        width: 100%;
+        max-width: 1050px;
+        margin: 0 auto;
+    }
+
+    .settings-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 26px;
+    }
+
+    .settings-heading {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .settings-heading-icon {
+        width: 48px;
+        height: 48px;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        color: var(--blue);
+        background: var(--blue-light);
+        border-radius: 15px;
+    }
+
+    .settings-heading-icon svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .settings-title {
+        margin: 0;
+        color: var(--navy);
+        font-size: 25px;
+        font-weight: 750;
+        letter-spacing: -0.5px;
+    }
+
+    .settings-subtitle {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .settings-section {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .settings-section-header {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 19px 24px;
+        background: #fbfcfe;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .section-icon {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        background: var(--blue-light);
+        color: var(--blue);
+        border-radius: 11px;
+        font-size: 17px;
+    }
+
+    .section-heading {
+        margin: 0;
+        color: var(--navy);
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .section-description {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+    .settings-section-body {
+        padding: 24px;
+    }
+
+    .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px;
+    }
+
+    .settings-field {
+        min-width: 0;
+    }
+
+    .settings-label {
+        display: block;
+        margin-bottom: 9px;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .settings-select {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 38px 10px 13px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        outline: none;
+        background-color: #fff;
+        color: var(--text);
+        font-size: 13px;
+        cursor: pointer;
+        transition: border-color .2s, box-shadow .2s;
+    }
+
+    .settings-select:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(40, 120, 223, .12);
+    }
+
+    .settings-option-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 19px 0;
+        border-bottom: 1px solid #f0f3f7;
+    }
+
+    .settings-option-row:first-child {
+        padding-top: 0;
+    }
+
+    .settings-option-row:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+
+    .option-title {
+        margin: 0;
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    .option-description {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    /* Custom toggle switch */
+    .settings-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .settings-switch input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+    }
+
+    .switch-track {
+        position: absolute;
+        inset: 0;
+        background: #d9e0e9;
+        border-radius: 30px;
+        transition: background .2s;
+    }
+
+    .switch-track::before {
+        content: "";
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        left: 3px;
+        top: 3px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0,0,0,.15);
+        transition: transform .2s;
+    }
+
+    .settings-switch input:checked + .switch-track {
+        background: var(--blue);
+    }
+
+    .settings-switch input:checked + .switch-track::before {
+        transform: translateX(20px);
+    }
+
+    .settings-switch input:focus-visible + .switch-track {
+        outline: 3px solid rgba(40,120,223,.2);
+        outline-offset: 3px;
+    }
+
+    .settings-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        padding: 5px 0 12px;
+    }
+
+    .settings-btn {
+        min-height: 42px;
+        padding: 0 19px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 650;
+        cursor: pointer;
+        transition: .2s;
+    }
+
+    .settings-btn-reset {
+        background: #fff;
+        border: 1px solid var(--border);
+        color: #64748b;
+    }
+
+    .settings-btn-reset:hover {
+        background: #f7f9fc;
+        border-color: #cbd5e1;
+    }
+
+    .settings-btn-save {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: var(--blue);
+        border: 1px solid var(--blue);
+        color: #fff;
+        box-shadow: 0 3px 9px rgba(40,120,223,.18);
+    }
+
+    .settings-btn-save:hover {
+        background: #1e65c0;
+        border-color: #1e65c0;
+        transform: translateY(-1px);
+    }
+
+    .settings-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    @media (max-width: 650px) {
+        .settings-header {
+            align-items: flex-start;
+        }
+
+        .settings-title {
+            font-size: 21px;
+        }
+
+        .settings-section-header {
+            padding: 16px 18px;
+        }
+
+        .settings-section-body {
+            padding: 19px;
+        }
+
+        .settings-grid {
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        .settings-option-row {
+            gap: 12px;
+        }
+
+        .settings-actions {
+            flex-wrap: wrap;
+        }
+
+        .settings-btn {
+            flex: 1;
+        }
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="settings-page">
+
+    <!-- PAGE HEADER -->
+    <div class="settings-header">
+        <div class="settings-heading">
+            <div class="settings-heading-icon">
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 00-1.88-.34 1.7 1.7 0 00-1.03 1.56V20h-2.4v-.2a1.7 1.7 0 00-1.03-1.56 1.7 1.7 0 00-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 008.4 15a1.7 1.7 0 00-1.56-1.03H6v-2.4h.84A1.7 1.7 0 008.4 10a1.7 1.7 0 00-.34-1.88L8 8.06l1.7-1.7.06.06a1.7 1.7 0 001.88.34A1.7 1.7 0 0012.67 5.2V5h2.4v.2a1.7 1.7 0 001.03 1.56 1.7 1.7 0 001.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0019.4 10a1.7 1.7 0 001.56 1.03h.2v2.4h-.2A1.7 1.7 0 0019.4 15z"/>
+                </svg>
+            </div>
+
+            <div>
+                <h1 class="settings-title">Settings</h1>
+                <p class="settings-subtitle">
+                    Customize your dashboard and system preferences.
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <!-- DASHBOARD PREFERENCES -->
+        <section class="settings-section">
+            <div class="settings-section-header">
+                <div class="section-icon">📊</div>
+                <div>
+                    <h2 class="section-heading">Dashboard Preferences</h2>
+                    <p class="section-description">
+                        Manage how reports appear on your dashboard.
+                    </p>
+                </div>
+            </div>
+
+            <div class="settings-section-body">
+                <div class="settings-grid">
+
+                    <div class="settings-field">
+                        <label for="default_risk_view" class="settings-label">
+                            Default Report View
+                        </label>
+
+                        <select id="default_risk_view"
+                                name="default_risk_view"
+                                class="settings-select">
+                            <option value="all" {% if settings.default_risk_view == 'all' %}selected{% endif %}>
+                                All Reports
+                            </option>
+                            <option value="high" {% if settings.default_risk_view == 'high' %}selected{% endif %}>
+                                High Risk Only
+                            </option>
+                            <option value="recent" {% if settings.default_risk_view == 'recent' %}selected{% endif %}>
+                                Recent Only
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="settings-field">
+                        <label for="items_per_page" class="settings-label">
+                            Items per Page
+                        </label>
+
+                        <select id="items_per_page"
+                                name="items_per_page"
+                                class="settings-select">
+                            <option value="5" {% if settings.items_per_page == '5' %}selected{% endif %}>
+                                5 reports
+                            </option>
+                            <option value="10" {% if settings.items_per_page == '10' %}selected{% endif %}>
+                                10 reports
+                            </option>
+                            <option value="20" {% if settings.items_per_page == '20' %}selected{% endif %}>
+                                20 reports
+                            </option>
+                            <option value="50" {% if settings.items_per_page == '50' %}selected{% endif %}>
+                                50 reports
+                            </option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="settings-option-row" style="margin-top: 25px;">
+                    <div>
+                        <p class="option-title">Show Low-Confidence Results</p>
+                        <p class="option-description">
+                            Display entries with AI confidence below 50%.
+                        </p>
+                    </div>
+
+                    <label class="settings-switch">
+                        <input type="checkbox"
+                               name="low_confidence_visibility"
+                               {% if settings.low_confidence_visibility %}checked{% endif %}>
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- NOTIFICATIONS -->
+        <section class="settings-section">
+            <div class="settings-section-header">
+                <div class="section-icon">🔔</div>
+                <div>
+                    <h2 class="section-heading">Notifications &amp; Alerts</h2>
+                    <p class="section-description">
+                        Control the alerts you want to receive.
+                    </p>
+                </div>
+            </div>
+
+            <div class="settings-section-body">
+
+                <div class="settings-option-row">
+                    <div>
+                        <p class="option-title">System Notifications</p>
+                        <p class="option-description">
+                            Show real-time alerts on dashboard.
+                        </p>
+                    </div>
+
+                    <label class="settings-switch">
+                        <input type="checkbox"
+                               name="notifications_enabled"
+                               {% if settings.notifications_enabled %}checked{% endif %}>
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+
+                <div class="settings-option-row">
+                    <div>
+                        <p class="option-title">Email Alerts</p>
+                        <p class="option-description">
+                            Receive email for high-risk reports.
+                        </p>
+                    </div>
+
+                    <label class="settings-switch">
+                        <input type="checkbox"
+                               name="email_alerts"
+                               {% if settings.email_alerts %}checked{% endif %}>
+                        <span class="switch-track"></span>
+                    </label>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- SYSTEM SETTINGS -->
+        <section class="settings-section">
+            <div class="settings-section-header">
+                <div class="section-icon">🕒</div>
+                <div>
+                    <h2 class="section-heading">System Settings</h2>
+                    <p class="section-description">
+                        Configure your preferred system time zone.
+                    </p>
+                </div>
+            </div>
+
+            <div class="settings-section-body">
+                <div class="settings-field">
+                    <label for="timezone" class="settings-label">
+                        Time Zone
+                    </label>
+
+                    <select id="timezone"
+                            name="timezone"
+                            class="settings-select"
+                            style="max-width: 430px;">
+                        <option value="Asia/Manila" {% if settings.timezone == 'Asia/Manila' %}selected{% endif %}>
+                            Philippines (UTC+8)
+                        </option>
+                        <option value="Asia/Singapore" {% if settings.timezone == 'Asia/Singapore' %}selected{% endif %}>
+                            Singapore (UTC+8)
+                        </option>
+                        <option value="Asia/Tokyo" {% if settings.timezone == 'Asia/Tokyo' %}selected{% endif %}>
+                            Japan (UTC+9)
+                        </option>
+                        <option value="UTC" {% if settings.timezone == 'UTC' %}selected{% endif %}>
+                            UTC
+                        </option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ACTION BUTTONS -->
+        <div class="settings-actions">
+            <button type="reset" class="settings-btn settings-btn-reset">
+                Reset
+            </button>
+
+            <button type="submit" class="settings-btn settings-btn-save">
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                    <path d="M17 21v-8H7v8M7 3v5h8"/>
+                </svg>
+                Save Changes
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}
