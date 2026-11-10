@@ -159,9 +159,10 @@
                     <span class="rd-conf-label">YOLO confidence</span>
                     <span class="rd-conf-value">{% if confidence_pct %}{{ confidence_pct|floatformat:1 }}%{% else %}&mdash;{% endif %}</span>
                 </div>
-                <div class="rd-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ confidence_pct|floatformat:0 }}">
-                    <span style="width: {{ confidence_pct|floatformat:0 }}%"></span>
-                </div>
+                <div class="rd-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" 
+     style="--bar-width: {{ confidence_pct|floatformat:0 }}%">
+  <span></span>
+</div>
             </div>
 
             <dl style="margin:0">

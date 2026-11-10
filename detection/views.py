@@ -281,9 +281,6 @@ def count_previous_similar_reports(latest, reports):
     )
 
 
-# =====================================================================
-# GEMINI
-# =====================================================================
 def _gemini_image_analysis(image_path, yolo_damage, yolo_confidence, detected_labels):
     api_key = getattr(settings, "GEMINI_API_KEY", "").strip()
     if not api_key:
@@ -499,7 +496,7 @@ def upload_and_detect(request):
     previous_similar_count = 0
 
     location = request.GET.get(
-        "location", getattr(settings, "OPENWEATHER_CITY", "Manila,PH")
+        "location", getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
     )
     weather, weather_error = get_current_weather(location)
 
@@ -615,7 +612,7 @@ def reports_list(request):
             {
                 "id": r.id,
                 "damage_type": damage or "Unspecified Damage",
-                "location": getattr(r, "location", None) or "Cabuyao, Laguna",
+                "location": getattr(r, "location", None) or "Manito, Albay",
                 "created_at": r.created_at,
                 "confidence": (r.confidence or 0) * 100,
                 "image": r.image,
@@ -648,14 +645,14 @@ def report_detail(request, report_id):
             "status_class": status_class,
             "status_text": status_text,
             "confidence_pct": (report.confidence or 0) * 100,
-            "location": getattr(report, "location", None) or "Cabuyao, Laguna",
+            "location": getattr(report, "location", None) or "Manito, Albay",
         },
     )
 
 
 @require_POST
 def delete_report(request, report_id):
-    """Burahin ang report sa database at pati ang mga image file nito."""
+    """Remove the report from the database and its associated image files."""
     report = get_object_or_404(DetectionResult, id=report_id)
     report_pk = report.pk
 
