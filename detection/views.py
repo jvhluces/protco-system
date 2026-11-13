@@ -3,6 +3,7 @@ import json
 import logging
 import mimetypes
 import re
+from django.contrib.auth import logout
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -10,20 +11,124 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from django.conf import settings
+from django.http import JsonResponse
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from ultralytics import YOLO
+import cv2
+import numpy as np
 
 from .models import DetectionResult
 
-from django.shortcuts import render
-from django.conf import settings
-# Kung mayroon kang function na nagkuha ng weather — i-import mo rin
-# from .utils import get_current_weather, get_weather_forecast
-
 logger = logging.getLogger(__name__)
+
+
+# =====================================================================
+# ONNX MODEL (best.onnx) - LAZY LOAD
+# =====================================================================
+# Ilagay ang best.onnx sa tabi ng manage.py (o sa detection/ folder).
+MODEL_CANDIDATES = [
+    Path(settings.BASE_DIR) / "best.onnx",
+    Path(settings.BASE_DIR) / "detection" / "best.onnx",
+    Path.cwd() / "best.onnx",
+]
+
+MODEL_PATH = next(
+    (path.resolve() for path in MODEL_CANDIDATES if path.is_file()),
+    None,
+)
+
+# Dapat kapareho ng pagkakasunod ng classes noong na-train mo ang model.
+CLASS_NAMES = {0: "Crack", 1: "Damage", 2: "Structural"}
+
+CONFIDENCE_THRESHOLD = 0.15
+NMS_THRESHOLD = 0.45
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+
+_session = None
+
+
+def get_model():
+    """I-load ang ONNX session isang beses lang (lazy), para hindi mag-error ang migrate/admin."""
+    global _session
+    if _session is not None:
+        return _session
+    if not MODEL_PATH:
+        logger.error("best.onnx not found. Place it beside manage.py or inside detection/ folder.")
+        return None
+    try:
+        import onnxruntime as ort
+        _session = ort.InferenceSession(str(MODEL_PATH), providers=["CPUExecutionProvider"])
+        logger.info("ProtCo ONNX model loaded from: %s", MODEL_PATH)
+    except Exception:
+        logger.exception("Failed to load ONNX model from %s", MODEL_PATH)
+        return None
+    return _session
+
+
+def run_onnx_detection(image_path, save_path):
+    """
+    Mag-detect gamit ang best.onnx, gumuhit ng boxes, at i-save ang annotated image sa save_path.
+    Return: [(label, confidence), ...]
+    """
+    session = get_model()
+    if session is None:
+        raise RuntimeError("ONNX model not loaded")
+
+    meta = session.get_inputs()[0]
+    in_h = meta.shape[2] if isinstance(meta.shape[2], int) else 640
+    in_w = meta.shape[3] if isinstance(meta.shape[3], int) else 640
+
+    img = cv2.imread(str(image_path))
+    if img is None:
+        raise ValueError(f"Cannot read image: {image_path}")
+    orig_h, orig_w = img.shape[:2]
+
+    # Letterbox (parehas ng ginagawa ng YOLO para hindi ma-stretch ang image)
+    scale = min(in_w / orig_w, in_h / orig_h)
+    new_w, new_h = int(round(orig_w * scale)), int(round(orig_h * scale))
+    pad_x, pad_y = (in_w - new_w) // 2, (in_h - new_h) // 2
+    canvas = np.full((in_h, in_w, 3), 114, dtype=np.uint8)
+    canvas[pad_y:pad_y + new_h, pad_x:pad_x + new_w] = cv2.resize(img, (new_w, new_h))
+
+    blob = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+    blob = np.expand_dims(np.transpose(blob, (2, 0, 1)), 0)
+
+    pred = session.run(None, {meta.name: blob})[0][0]
+    if pred.shape[0] < pred.shape[1]:  # (4+nc, N) -> (N, 4+nc)
+        pred = pred.T
+
+    class_scores = pred[:, 4:]
+    class_ids = class_scores.argmax(axis=1)
+    confs = class_scores.max(axis=1)
+    keep = confs >= CONFIDENCE_THRESHOLD
+    pred, class_ids, confs = pred[keep], class_ids[keep], confs[keep]
+
+    detections = []
+    if len(pred):
+        boxes = []
+        for cx, cy, w, h in pred[:, :4]:
+            x1 = max(0, int((cx - w / 2 - pad_x) / scale))
+            y1 = max(0, int((cy - h / 2 - pad_y) / scale))
+            x2 = min(orig_w, int((cx + w / 2 - pad_x) / scale))
+            y2 = min(orig_h, int((cy + h / 2 - pad_y) / scale))
+            boxes.append([x1, y1, x2 - x1, y2 - y1])
+
+        idxs = cv2.dnn.NMSBoxes(boxes, confs.tolist(), CONFIDENCE_THRESHOLD, NMS_THRESHOLD)
+        for i in np.array(idxs).flatten():
+            x, y, w, h = boxes[i]
+            label = CLASS_NAMES.get(int(class_ids[i]), f"class_{int(class_ids[i])}")
+            conf = float(confs[i])
+            detections.append((label, conf))
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 3)
+            cv2.putText(
+                img, f"{label} {conf:.2f}", (x, max(y - 10, 15)),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2,
+            )
+
+    cv2.imwrite(str(save_path), img)
+    return detections
 
 
 # =====================================================================
@@ -135,10 +240,10 @@ def get_weather_forecast(location):
 def weather_forecast(request):
     # Kunin muna ang galing sa search bar, kung wala → default
     location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
-    
+
     weather, weather_error = get_current_weather(location)
     forecast, forecast_error = get_weather_forecast(location)
-    
+
     return render(request, "detection/weather_forecast.html", {
         "weather": weather,
         "forecast": forecast or [],
@@ -147,12 +252,13 @@ def weather_forecast(request):
         "location": location,  # ← Ipakita sa input box ang hinanap
     })
 
+
 def damage_check(request):
     # Kunin mula sa search bar, kung wala → gamitin ang default
     location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
-    
+
     weather, weather_error = get_current_weather(location)
-    
+
     return render(request, "detection/damage_check.html", {
         "weather": weather,
         "weather_error": weather_error,
@@ -160,40 +266,9 @@ def damage_check(request):
     })
 
 
-
 # =====================================================================
-# YOLO MODEL
+# DETECTION HELPERS
 # =====================================================================
-MODEL_CANDIDATES = [
-    Path(settings.BASE_DIR) / "best.pt",
-    Path(settings.BASE_DIR) / "detection" / "best.pt",
-    Path.cwd() / "best.pt",
-]
-
-MODEL_PATH = next(
-    (path.resolve() for path in MODEL_CANDIDATES if path.is_file()),
-    None,
-)
-
-model = None
-
-if MODEL_PATH:
-    try:
-        model = YOLO(str(MODEL_PATH))
-        logger.info("ProtCo YOLO model loaded from: %s", MODEL_PATH)
-    except Exception:
-        logger.exception("Failed to load YOLO model from %s", MODEL_PATH)
-else:
-    logger.error(
-        "YOLO model not found. Place best.pt beside manage.py "
-        "or inside the detection/ folder. Checked paths:\n%s",
-        "\n".join(str(path) for path in MODEL_CANDIDATES),
-    )
-
-CONFIDENCE_THRESHOLD = 0.15
-IMAGE_SIZE = 1024
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-
 NO_DAMAGE_LABELS = {
     "No Confirmed Damage Detected",
     "Object Detected - Damage Not Confirmed",
@@ -208,6 +283,7 @@ DAMAGE_MAP = {
     "damaged wall": "Potential Wall Damage",
     "wall damage": "Potential Wall Damage",
     "structural damage": "Potential Structural Damage",
+    "structural": "Potential Structural Damage",
     "broken glass": "Potential Broken Glass",
     "broken window": "Potential Window Damage",
     "damaged window": "Potential Window Damage",
@@ -222,36 +298,24 @@ def normalize_label(label):
     return " ".join(str(label).strip().lower().replace("_", " ").split())
 
 
-def classify_detections(result):
-    """Return (damage summary, best confidence, all detected labels)."""
-    detected_labels = []
+def classify_detections(detections):
+    """detections = [(label, conf), ...] -> (damage summary, best confidence, all detected labels)"""
+    if not detections:
+        return "No Confirmed Damage Detected", 0.0, []
+
+    detected_labels = [f"{label} {conf:.0%}" for label, conf in detections]
     damage_candidates = []
 
-    boxes = result.boxes
-    if boxes is None or len(boxes) == 0:
-        return "No Confirmed Damage Detected", 0.0, detected_labels
-
-    names = result.names
-    for box in boxes:
-        cls_id = int(box.cls[0].item())
-        confidence = float(box.conf[0].item())
-
-        if isinstance(names, dict):
-            raw_label = str(names.get(cls_id, f"class_{cls_id}"))
-        else:
-            raw_label = str(names[cls_id])
-
-        detected_labels.append(f"{raw_label} {confidence:.0%}")
-
-        mapped = DAMAGE_MAP.get(normalize_label(raw_label))
+    for label, conf in detections:
+        mapped = DAMAGE_MAP.get(normalize_label(label))
         if mapped:
-            damage_candidates.append((confidence, mapped, raw_label))
+            damage_candidates.append((conf, mapped))
 
     if not damage_candidates:
         return "Object Detected - Damage Not Confirmed", 0.0, detected_labels
 
     damage_candidates.sort(key=lambda item: item[0], reverse=True)
-    best_confidence, best_damage, _ = damage_candidates[0]
+    best_confidence, best_damage = damage_candidates[0]
 
     if len(damage_candidates) > 1:
         damage_found = (
@@ -328,6 +392,7 @@ STRICT RULES:
 5. Risk level must be exactly Low, Medium, or High. Base it on visible severity and immediate safety implications, not on YOLO confidence alone.
 6. This is preliminary visual guidance, not a structural engineering diagnosis. Never claim certainty about hidden structural conditions.
 7. Recommendations must be practical and safe for a school environment. Do not advise untrained people to repair electrical or structural hazards.
+8. Set is_infrastructure to true ONLY if the main subject of the photo is school infrastructure, a building part, or a facility/fixture/furniture item (wall, ceiling, floor, roof, door, window, stairs, railing, pipe, wiring, desk, chair, etc.). Set it to false if the main subject is a person, face, animal, plant, food, vehicle, sky/scenery, or any other non-facility subject.
 
 Return ONLY valid JSON with exactly these keys:
 {{
@@ -337,7 +402,8 @@ Return ONLY valid JSON with exactly these keys:
   "immediate_actions": ["Action 1", "Action 2"],
   "avoid_actions": ["Thing to avoid 1"],
   "maintenance_priority": "A short priority statement and who should inspect it.",
-  "visual_observations": ["Visible observation 1", "Visible observation 2"]
+  "visual_observations": ["Visible observation 1", "Visible observation 2"],
+  "is_infrastructure": true
 }}
 Use 2-5 useful list items where appropriate. Keep the language clear and specific.
 """
@@ -354,11 +420,11 @@ Use 2-5 useful list items where appropriate. Keep the language clear and specifi
             "generationConfig": {
                 "temperature": 0.2,
                 "responseMimeType": "application/json",
-                "maxOutputTokens": 1200,
+                "maxOutputTokens": 4096,
             },
         }
 
-        model_name = getattr(settings, "GEMINI_MODEL", "gemini-2.5-flash").strip()
+        model_name = getattr(settings, "GEMINI_MODEL", "gemini-3.6-flash").strip()
         url = (
             "https://generativelanguage.googleapis.com/v1beta/"
             f"models/{model_name}:generateContent"
@@ -400,6 +466,12 @@ Use 2-5 useful list items where appropriate. Keep the language clear and specifi
             items = [str(i).strip()[:500] for i in value if str(i).strip()]
             return items[:6] or fallback
 
+        raw_infra = analysis.get("is_infrastructure", True)
+        if isinstance(raw_infra, bool):
+            is_infrastructure = raw_infra
+        else:
+            is_infrastructure = str(raw_infra).strip().lower() not in {"false", "no", "0"}
+
         no_damage = yolo_confidence <= 0 or yolo_damage in NO_DAMAGE_LABELS
         if no_damage:
             risk = "Low"
@@ -438,6 +510,7 @@ Use 2-5 useful list items where appropriate. Keep the language clear and specifi
                 analysis.get("visual_observations"),
                 ["Review the uploaded image for visible details."],
             ),
+            "is_infrastructure": is_infrastructure,
         }
 
     except HTTPError as exc:
@@ -479,7 +552,7 @@ ALLOWED_DAMAGE_KEYWORDS = [
 FORBIDDEN_CONTENT = [
     "person", "people", "human", "face", "animal", "dog", "cat", "bird",
     "tree", "plant", "flower", "sky", "cloud", "sun", "moon", "car",
-    "vehicle", "bike", "motorcycle", "bicycle", "food", "drink", "furniture",
+    "vehicle", "bike", "motorcycle", "bicycle", "food", "drink",
 ]
 
 
@@ -500,6 +573,33 @@ def _can_submit(latest):
     return _contains_word(text, ALLOWED_DAMAGE_KEYWORDS) and not _contains_word(
         text, FORBIDDEN_CONTENT
     )
+
+
+@require_POST
+def submit_report(request, report_id):
+    """Tinatawag ng Submit Report button sa damage_check.html (via fetch)."""
+    report = get_object_or_404(DetectionResult, id=report_id)
+
+    if not _can_submit(report):
+        return JsonResponse(
+            {"ok": False, "error": "Only infrastructure/facility damage reports can be submitted."},
+            status=400,
+        )
+
+    if report.submitted:
+        return JsonResponse({"ok": True, "already": True, "report_id": report.pk})
+
+    try:
+        report.submitted = True
+        report.save(update_fields=["submitted"])
+    except Exception:
+        logger.exception("Could not mark report %s as submitted", report.pk)
+        return JsonResponse(
+            {"ok": False, "error": "Could not save the report. Check the Django terminal for details."},
+            status=500,
+        )
+
+    return JsonResponse({"ok": True, "already": False, "report_id": report.pk})
 
 
 def upload_and_detect(request):
@@ -532,33 +632,25 @@ def upload_and_detect(request):
             report = DetectionResult.objects.create(image=img_file)
 
             try:
-                if model is None:
+                image_path = Path(report.image.path)
+                if not image_path.is_file():
+                    raise FileNotFoundError(f"Uploaded image not found: {image_path}")
+
+                if get_model() is None:
                     report.damage_type = "Detection Unavailable - Model Not Loaded"
                     report.confidence = 0.0
                     report.save()
                     error_message = (
-                        "The YOLO model could not be loaded. Place best.pt in the project "
+                        "The ONNX model could not be loaded. Place best.onnx in the project "
                         "root or detection/ folder, then restart Django."
                     )
                 else:
-                    image_path = Path(report.image.path)
-                    if not image_path.is_file():
-                        raise FileNotFoundError(f"Uploaded image not found: {image_path}")
-
-                    results = model.predict(
-                        source=str(image_path),
-                        conf=CONFIDENCE_THRESHOLD,
-                        imgsz=IMAGE_SIZE,
-                        verbose=False,
-                    )
-                    result = results[0]
-
                     detected_rel_path = f"detections/detected/{report.pk}_detected.jpg"
                     detected_abs_path = Path(settings.MEDIA_ROOT) / detected_rel_path
                     detected_abs_path.parent.mkdir(parents=True, exist_ok=True)
-                    result.save(filename=str(detected_abs_path))
 
-                    damage_found, confidence, detected_labels = classify_detections(result)
+                    detections = run_onnx_detection(image_path, detected_abs_path)
+                    damage_found, confidence, detected_labels = classify_detections(detections)
 
                     report.damage_type = damage_found
                     report.confidence = confidence
@@ -583,10 +675,11 @@ def upload_and_detect(request):
                 report.confidence = 0.0
                 report.save()
                 error_message = "Image analysis failed. Check the Django terminal for details."
-        latest = report
-        previous_similar_count = count_previous_similar_reports(
-            latest, DetectionResult.objects.exclude(pk=latest.pk)
-        )
+
+            latest = report
+            previous_similar_count = count_previous_similar_reports(
+                latest, DetectionResult.objects.exclude(pk=latest.pk)
+            )
 
     return render(
         request,
@@ -598,16 +691,35 @@ def upload_and_detect(request):
             "previous_similar_count": previous_similar_count,
             "weather": weather,
             "weather_error": weather_error,
-            "can_submit_report": _can_submit(latest),
+            "can_submit_report": _can_submit(latest) and (
+                not gemini_analysis
+                or not gemini_analysis.get("available")
+                or gemini_analysis.get("is_infrastructure", True)
+            ),
             "location": location,
         },
     )
 
 
-                
+# =====================================================================
+# DASHBOARD (mga na-submit na report lang)
+# =====================================================================
+def dashboard(request):
+    location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
+    weather, weather_error = get_current_weather(location)
 
-           
-    
+    reports = DetectionResult.objects.filter(submitted=True).order_by("-created_at")
+
+    # Subukan ang mga pangalan ng template na ito, ayon sa pagkakasunod.
+    # Kung iba ang pangalan ng dashboard file mo, idagdag dito.
+    return render(request, ["detection/dashboard.html", "detection/upload.html"], {
+        "reports": reports,
+        "latest": reports.first(),
+        "weather": weather,
+        "weather_error": weather_error,
+        "location": location,
+    })
+
 
 # =====================================================================
 # REPORTS
@@ -616,7 +728,6 @@ def reports_list(request):
     location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
     all_reports = DetectionResult.objects.all().order_by("-created_at")
 
-
     reports_data = []
     for r in all_reports:
         damage = r.damage_type or ""
@@ -624,8 +735,10 @@ def reports_list(request):
             status_class, status_text = "failed", "Analysis Failed"
         elif damage in NO_DAMAGE_LABELS:
             status_class, status_text = "pending", "No Damage Found"
-        else:
+        elif getattr(r, "submitted", False):
             status_class, status_text = "submitted", "Report Submitted"
+        else:
+            status_class, status_text = "pending", "Not Submitted"
 
         reports_data.append(
             {
@@ -643,20 +756,24 @@ def reports_list(request):
     return render(request, "detection/reports.html", {"reports": reports_data})
 
 
-def _report_status(damage):
+def _report_status(damage, submitted=False):
     damage = damage or ""
     if damage.startswith("Detection"):
         return "failed", "Analysis Failed"
     if damage in NO_DAMAGE_LABELS:
         return "pending", "No Damage Found"
-    return "submitted", "Report Submitted"
+    if submitted:
+        return "submitted", "Report Submitted"
+    return "pending", "Not Submitted"
 
 
 def report_detail(request, report_id):
     location = request.GET.get("location") or getattr(settings, "OPENWEATHER_CITY", "Manito,PH")
     report = get_object_or_404(DetectionResult, id=report_id)
 
-    status_class, status_text = _report_status(report.damage_type)
+    status_class, status_text = _report_status(
+        report.damage_type, getattr(report, "submitted", False)
+    )
 
     return render(
         request,
@@ -690,15 +807,13 @@ def delete_report(request, report_id):
     return redirect("detection:reports")
 
 
-
-from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages
+
 
 #@login_required
 def settings_view(request):
     """Display and handle user/system settings for the teacher dashboard"""
-    
+
     # Current settings values - can later be saved to User profile
     context = {
         "page_title": "Settings",
@@ -736,4 +851,8 @@ def settings_view(request):
         return redirect("settings")
 
     return render(request, "detection/settings.html", context)
-# Kung sa detection/templates/detection/ mo nilagay
+
+
+def logout_view(request):
+    logout(request)
+    return redirect("detection:login")

@@ -1,0 +1,462 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block head_extra %}
+<style>
+    .top-row,
+    .bottom-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+    }
+
+    .condition-card {
+        position: relative;
+        isolation: isolate;
+        background: linear-gradient(125deg, #d9f1ff 0%, #a9ddff 35%, #7cc5f7 68%, #a4dcff 100%);
+        color: #12385a;
+        display: flex;
+        align-items: center;
+        padding: 28px 30px 28px 42px;
+        gap: 24px;
+        min-height: 220px;
+    }
+    .condition-card:hover,
+    .map-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+    }
+    .weather-icon-container {
+        width: 115px;
+        min-width: 115px;
+        height: 115px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .weather-icon-large {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+    }
+    .weather-info {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+        font-family: "Plus Jakarta Sans", sans-serif;
+    }
+    .weather-info-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 15px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: #174b70;
+    }
+    .weather-location {
+        font-size: 12px;
+        font-weight: 700;
+        color: #356582;
+    }
+    .weather-vertical-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 4px;
+    }
+    .weather-main-row {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+    }
+    .weather-temp {
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: -2px;
+        line-height: 1;
+        color: #103b60;
+    }
+    .weather-status {
+        font-size: 13px;
+        font-weight: 800;
+        text-transform: capitalize;
+        color: #174b70;
+    }
+    .weather-subdetails {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-family: "Inter", sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        color: #315d7a;
+    }
+    .weather-subdetails strong {
+        font-weight: 800;
+        color: #174b70;
+    }
+
+    .combined-stats-card {
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+    }
+    .combined-stats-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+    .stat-section {
+        flex: 1;
+        padding: 35px 36px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        text-decoration: none;
+        background: #fff;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+    .stat-section::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .stat-section:hover::before {
+        opacity: 1;
+    }
+    .stat-section > * {
+        position: relative;
+    }
+    .stat-section:hover .stat-value {
+        color: var(--blue-600);
+        transform: translateY(-3px);
+    }
+    .stat-section:hover .stat-icon {
+        transform: translateY(-4px) scale(1.06);
+        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35);
+    }
+    .stat-title,
+    .stat-value,
+    .stat-subtext,
+    .stat-icon {
+        transition: all 0.3s ease;
+    }
+    .stat-divider {
+        width: 1px;
+        background: var(--border-color);
+        margin: 28px 0;
+    }
+    .stat-icon {
+        width: 58px;
+        height: 58px;
+        background: var(--gradient-blue);
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        color: #fff;
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.28);
+    }
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .stat-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+    .stat-value {
+        font-size: 34px;
+        font-weight: 800;
+        color: var(--text-main);
+        font-variant-numeric: tabular-nums;
+    }
+    .stat-subtext {
+        font-size: 11.5px;
+        color: #94a3b8;
+    }
+    .stat-value.bump {
+        animation: pop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+        color: var(--blue-600);
+    }
+
+    .map-card {
+        display: flex;
+        flex-direction: column;
+        padding: 28px;
+    }
+    .map-header {
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .map-header h3 {
+        font-size: 17px;
+        font-weight: 700;
+    }
+    .map-header i {
+        color: var(--blue-600);
+        font-size: 22px;
+    }
+    .map-placeholder {
+        background: linear-gradient(160deg, #f4f9ff, #e6f1ff);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        height: 240px;
+        width: 100%;
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        padding: 25px;
+        overflow: hidden;
+    }
+    .wind-bg {
+        background-image: repeating-linear-gradient(
+            45deg,
+            rgba(96, 165, 250, 0.14) 25%,
+            transparent 25%,
+            transparent 75%,
+            rgba(96, 165, 250, 0.14) 75%,
+            rgba(96, 165, 250, 0.14)
+        );
+        background-size: 30px 30px;
+        animation: drift 14s linear infinite;
+    }
+    .location-bg {
+        background-image: radial-gradient(#bcd4f5 1px, transparent 1px);
+        background-size: 20px 20px;
+    }
+    @keyframes drift {
+        to {
+            background-position: 60px 30px;
+        }
+    }
+    .pin-wrapper {
+        position: absolute;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .pin-halo {
+        width: 60px;
+        height: 60px;
+        background: rgba(59, 130, 246, 0.18);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: pulse 2s infinite;
+    }
+    .pin-core {
+        width: 34px;
+        height: 34px;
+        background: var(--gradient-blue);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 4px solid #fff;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    .pin-core i {
+        color: #fff;
+        font-size: 16px;
+    }
+    .btn-full {
+        width: 100%;
+        background: var(--gradient-blue);
+        color: #fff;
+        border: none;
+        padding: 15px;
+        border-radius: 50px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        box-shadow: 0 6px 12px rgba(37, 99, 235, 0.25);
+        z-index: 2;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        transition: all 0.25s ease;
+    }
+    .btn-full:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(37, 99, 235, 0.38);
+    }
+
+    @media (max-width: 960px) {
+        .top-row,
+        .bottom-row {
+            grid-template-columns: 1fr;
+        }
+        .condition-card {
+            padding: 24px;
+        }
+        .combined-stats-card {
+            flex-direction: column;
+        }
+        .stat-divider {
+            width: auto;
+            height: 1px;
+            margin: 0 28px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block topbar_search %}
+<form class="top-search-box" id="quickNav" autocomplete="off">
+    <i class="ph ph-magnifying-glass" style="color: var(--text-muted); font-size: 18px;"></i>
+    <input type="text" id="quickNavInput" placeholder="Quick jump: reports, users, weather...">
+</form>
+{% endblock %}
+
+{% block content %}
+<div class="top-row">
+    <div class="card condition-card anim">
+        <div class="weather-icon-container">
+            <img id="weather-icon" src="" alt="Weather Condition" class="weather-icon-large">
+        </div>
+        <div class="weather-info">
+            <div class="weather-info-header">
+                <span>Current Weather</span>
+                <span id="weather-clock" style="display: inline-flex; align-items: baseline; gap: 4px;">
+                    <span id="clock-main" style="font-size: 15px; font-weight: 800; color: #174b70;">--:--</span>
+                    <span id="clock-sec" style="font-size: 10px; font-weight: 700; color: #356582;">-- --</span>
+                </span>
+            </div>
+            <div class="weather-location" id="weather-city">Manila, Philippines</div>
+            <div class="weather-vertical-stack">
+                <div class="weather-main-row">
+                    <div class="weather-temp" id="temperature">--°C</div>
+                    <div class="weather-status" id="weather-description">Loading...</div>
+                </div>
+                <div class="weather-subdetails">
+                    <div>Temperature: <strong id="feels-like">--°C</strong></div>
+                    <div>Humidity: <strong id="humidity">--%</strong></div>
+                    <div>Wind: <strong id="wind-speed">-- m/s</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card combined-stats-card anim" style="--d: .1s">
+        <a href="{% url 'reports' %}" class="stat-section">
+            <div class="stat-icon"><i class="ph ph-file-text"></i></div>
+            <div class="stat-content">
+                <span class="stat-title">Reports Logged</span>
+                <span class="stat-value" id="report-count">0</span>
+                <span class="stat-subtext" id="report-sub">Saved detections</span>
+            </div>
+        </a>
+        <div class="stat-divider"></div>
+        <a href="{% url 'users' %}" class="stat-section">
+            <div class="stat-icon"><i class="ph ph-users"></i></div>
+            <div class="stat-content">
+                <span class="stat-title">Registered Users</span>
+                <span class="stat-value" id="user-count">0</span>
+                <span class="stat-subtext">Active accounts</span>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="bottom-row">
+    <div class="card map-card anim" style="--d: .2s">
+        <div class="map-header"><i class="ph ph-wind"></i><h3>Wind Map Forecast</h3></div>
+        <div class="map-placeholder wind-bg">
+            <a href="{% url 'windmap' %}" class="btn-full">View Full Forecast</a>
+        </div>
+    </div>
+    <div class="card map-card anim" style="--d: .3s">
+        <div class="map-header"><i class="ph ph-map-pin"></i><h3>School Map Location</h3></div>
+        <div class="map-placeholder location-bg">
+            <div class="pin-wrapper">
+                <div class="pin-halo">
+                    <div class="pin-core"><i class="ph-fill ph-map-pin"></i></div>
+                </div>
+            </div>
+            <a href="{% url 'schoolmap' %}" class="btn-full">View Full Map</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Live counters: Reports Logged (user_logged.html) + Registered Users (user_register.html)
+    function animateNumber(el, to) {
+        var from = Number(el.getAttribute("data-v") || 0);
+        if (from === to) {
+            if (!el.textContent) el.textContent = to;
+            return;
+        }
+        el.setAttribute("data-v", to);
+        var start = performance.now(),
+            dur = 700;
+        (function step(now) {
+            var p = Math.min(1, (now - start) / dur),
+                e = 1 - Math.pow(1 - p, 3);
+            el.textContent = Math.round(from + (to - from) * e);
+            if (p < 1) requestAnimationFrame(step);
+        })(start);
+        if (from !== 0) {
+            el.classList.remove("bump");
+            void el.offsetWidth;
+            el.classList.add("bump");
+        }
+    }
+    function renderCounts(d) {
+        animateNumber(document.getElementById("report-count"), d.reports.length);
+        animateNumber(document.getElementById("user-count"), d.users.length);
+        var pending = d.reports.filter(function (r) {
+            return (r.status || "Pending") === "Pending";
+        }).length;
+        document.getElementById("report-sub").textContent = pending
+            ? pending + " pending review"
+            : "Saved detections";
+    }
+    document.addEventListener("protco:data", function (e) {
+        renderCounts(e.detail);
+    });
+
+    // Quick jump search
+    document.getElementById("quickNav").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var q = document.getElementById("quickNavInput").value.trim().toLowerCase();
+        var map = {
+            report: "{% url 'reports' %}",
+            user: "{% url 'users' %}",
+            weather: "{% url 'windmap' %}",
+            wind: "{% url 'windmap' %}",
+            forecast: "{% url 'windmap' %}",
+            map: "{% url 'schoolmap' %}",
+            school: "{% url 'schoolmap' %}",
+            setting: "{% url 'settings' %}",
+        };
+        for (var k in map) {
+            if (q && q.indexOf(k) !== -1) {
+                location.href = map[k];
+                return;
+            }
+        }
+        if (window.Protco) Protco.toast('No page matches "' + q + '".', { type: "warn", title: "Quick jump" });
+    });
+</script>
+<script src="{% static 'js/weather.js' %}"></script>
+{% endblock %}

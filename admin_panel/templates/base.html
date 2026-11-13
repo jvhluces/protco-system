@@ -1,0 +1,137 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en" data-login-url="{% url 'login' %}" data-dashboard-url="{% url 'admin_dashboard' %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ProtCo{% endblock %} | ProtCo</title>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/protco.css' %}">
+    <script src="{% static 'js/protco.js' %}"></script>
+    {% block head_extra %}{% endblock %}
+</head>
+<body class="app">
+    {% with current=request.resolver_match.url_name %}
+    <div class="sidebar-backdrop"></div>
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon"><i class="ph-fill ph-shield-check"></i></div>
+            <div class="brand-text">PROTCO<small>SYSTEM</small></div>
+            <button type="button" class="collapse-btn" data-action="collapse-sidebar" data-label="Collapse sidebar" aria-label="Collapse sidebar">
+                <i class="ph ph-caret-left"></i><i class="ph ph-caret-right"></i>
+            </button>
+        </div>
+        <nav class="nav-items">
+            <a href="{% url 'admin_dashboard' %}" class="nav-item {% if current == 'admin_dashboard' %}active{% endif %}" data-label="Dashboard"><i class="ph ph-house"></i> <span class="nav-text">Dashboard</span></a>
+            <a href="{% url 'reports' %}" class="nav-item {% if current == 'reports' %}active{% endif %}" data-label="Reports"><i class="ph ph-folder-open"></i> <span class="nav-text">Reports</span></a>
+            <a href="{% url 'users' %}" class="nav-item {% if current == 'users' %}active{% endif %}" data-label="Users"><i class="ph ph-users"></i> <span class="nav-text">Users</span></a>
+            <a href="{% url 'windmap' %}" class="nav-item {% if current == 'windmap' %}active{% endif %}" data-label="Weather Forecast"><i class="ph ph-wind"></i> <span class="nav-text">Weather Forecast</span></a>
+            <a href="{% url 'schoolmap' %}" class="nav-item {% if current == 'schoolmap' %}active{% endif %}" data-label="School Map"><i class="ph ph-map-pin"></i> <span class="nav-text">School Map</span></a>
+            <a href="{% url 'settings' %}" class="nav-item {% if current == 'settings' %}active{% endif %}" data-label="Settings"><i class="ph ph-gear"></i> <span class="nav-text">Settings</span></a>
+
+            <button type="button" class="logout-btn" data-action="open-logout" data-label="Logout">
+                <i class="ph ph-sign-out"></i> <span class="nav-text">Logout</span>
+            </button>
+        </nav>
+    </aside>
+    {% endwith %}
+
+    <div class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button type="button" class="menu-btn" data-action="toggle-sidebar" aria-label="Menu"><i class="ph ph-list"></i></button>
+                <div class="page-title">{% block page_title %}Dashboard{% endblock %}</div>
+            </div>
+
+            <div class="top-actions">
+                {% block topbar_search %}{% endblock %}
+
+                <div class="top-icons">
+                    <!-- NOTIFICATIONS (bell) -->
+                    <div class="dd-wrap">
+                        <button type="button" class="icon-btn" id="notifBtn" data-dd-toggle="notificationDropdown" aria-label="Notifications">
+                            <i class="ph ph-bell"></i>
+                            <span class="badge-count" id="notifBadge" hidden>0</span>
+                        </button>
+                        <div class="dropdown-box" id="notificationDropdown">
+                            <div class="dropdown-header"><span>Notifications <small id="notifCount" style="color:var(--text-muted);font-weight:600;"></small></span><button type="button" class="link" data-action="mark-all-notifs">Mark all read</button></div>
+                            <div class="dd-list" id="notifList"></div>
+                        </div>
+                    </div>
+
+                    <!-- MESSAGES (envelope) -->
+                    <div class="dd-wrap">
+                        <button type="button" class="icon-btn" id="msgBtn" data-dd-toggle="messageDropdown" aria-label="Messages">
+                            <i class="ph ph-envelope"></i>
+                            <span class="badge-count" id="msgBadge" hidden>0</span>
+                        </button>
+                        <div class="dropdown-box" id="messageDropdown">
+                            <div class="dropdown-header"><span>Messages <small id="msgCount" style="color:var(--text-muted);font-weight:600;"></small></span><button type="button" class="link" data-action="mark-all-msgs">Mark all read</button></div>
+                            <div class="dd-list" id="msgList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROFILE (name + photo of whoever is logged in; clickable, no actions yet) -->
+                <div class="dd-wrap">
+                    <button type="button" class="user-profile" data-dd-toggle="profileDropdown" aria-label="Profile">
+                        <span class="user-avatar" data-bind="avatar">A</span>
+                        <span class="user-meta">
+                            <span class="user-name" data-bind="name">Admin</span>
+                            <span class="user-role" data-bind="role">Admin</span>
+                        </span>
+                        <i class="ph ph-caret-down user-caret"></i>
+                    </button>
+                    <div class="dropdown-box profile-dd" id="profileDropdown">
+                        <div class="profile-head">
+                            <span class="user-avatar" data-bind="avatar">A</span>
+                            <h4 data-bind="fullname">Admin</h4>
+                            <p data-bind="contact"></p>
+                            <span class="role-chip" data-bind="role">Admin</span>
+                        </div>
+                        <button type="button" class="profile-row" data-action="soon"><i class="ph ph-user-circle"></i> My Profile <span class="soon">Soon</span></button>
+                        <button type="button" class="profile-row" data-action="soon"><i class="ph ph-image"></i> Change Photo <span class="soon">Soon</span></button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-container">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- LOGOUT MODAL -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="modal-card">
+            <div class="modal-icon"><i class="ph ph-sign-out"></i></div>
+            <h3>Are you sure you want to log out?</h3>
+            <p class="sub">You can always sign back in whenever you're ready.</p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" data-action="close-logout">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="confirm-logout">Yes, Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MESSAGE VIEWER -->
+    <div class="modal-overlay" id="messageModal">
+        <div class="modal-card msg-modal">
+            <div class="msg-meta">
+                <span class="user-avatar" id="msgAvatar" style="width:44px;height:44px;">A</span>
+                <div><strong id="msgFrom" style="display:block;font-size:15px;"></strong><span id="msgEmail" style="font-size:12.5px;color:var(--text-muted);"></span></div>
+            </div>
+            <h3 id="msgSubject" style="margin-bottom:12px;"></h3>
+            <div class="msg-body" id="msgText"></div>
+            <div class="modal-actions"><button type="button" class="btn btn-primary" data-action="close-message">Close</button></div>
+        </div>
+    </div>
+
+    <div class="toast-stack" id="toastStack"></div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

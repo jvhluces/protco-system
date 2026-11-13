@@ -1,0 +1,607 @@
+{% extends 'base.html' %}
+{% block title %}User Logs{% endblock %}
+{% block page_title %}User Management &amp; Logs{% endblock %}
+
+{% block head_extra %}
+<style>
+    .controls-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff;
+        padding: 18px 24px;
+        border-radius: 22px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-sm);
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    .search-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--blue-50);
+        border: 1px solid var(--border-color);
+        padding: 13px 20px;
+        border-radius: 14px;
+        width: 440px;
+        max-width: 100%;
+        transition: 0.2s;
+    }
+    .search-box:focus-within {
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        background: #fff;
+    }
+    .search-box input {
+        border: none;
+        background: none;
+        outline: none;
+        width: 100%;
+        font-size: 15px;
+        color: var(--text-main);
+    }
+    .filter-group {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .filter-btn {
+        padding: 10px 18px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: #fff;
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .filter-btn.active,
+    .filter-btn:hover {
+        background: var(--gradient-blue);
+        background: var(--blue-50);
+        color: var(--blue-600);
+        border-color: var(--blue-400);
+    }
+    .filter-btn.active {
+        background: var(--gradient-blue);
+        color: #fff;
+        border-color: transparent;
+        box-shadow: 0 6px 12px rgba(37, 99, 235, 0.25);
+    }
+    .view-toggle {
+        display: flex;
+        background: var(--blue-50);
+        padding: 4px;
+        border-radius: 12px;
+        gap: 4px;
+    }
+    .view-btn {
+        padding: 8px 14px;
+        border-radius: 10px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 18px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .view-btn.active {
+        background: #fff;
+        color: var(--blue-600);
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+    }
+
+    .users-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+        gap: 22px;
+    }
+    .user-card {
+        background: #fff;
+        border-radius: 24px;
+        border: 1px solid var(--border-color);
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.25s ease;
+        animation: fadeUp 0.5s ease both;
+    }
+    .user-card:hover {
+        transform: translateY(-6px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--blue-400);
+    }
+    .card-avatar-wrapper {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--gradient-soft);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+        border: 3px solid var(--sky-100);
+        overflow: hidden;
+        transition: 0.3s;
+    }
+    .user-card:hover .card-avatar-wrapper {
+        transform: scale(1.08);
+        border-color: var(--blue-500);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+    }
+    .card-avatar-wrapper img,
+    .row-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .card-avatar-initial {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--blue-600);
+    }
+    .card-name {
+        font-size: 16.5px;
+        font-weight: 800;
+        margin-bottom: 4px;
+    }
+    .card-email {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+        word-break: break-all;
+    }
+    .card-role-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
+        cursor: default;
+    }
+    .card-role-badge:hover {
+        transform: scale(1.08);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    }
+    .role-student {
+        background: #e0f2fe;
+        color: #0369a1;
+    }
+    .role-teacher {
+        background: #dcfce7;
+        color: #15803d;
+    }
+    .role-admin {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+    .role-suspended {
+        background: #f1f5f9;
+        color: #64748b;
+        text-decoration: line-through;
+    }
+    .card-details {
+        width: 100%;
+        border-top: 1px solid var(--border-color);
+        padding-top: 12px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-around;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+    .card-details strong {
+        color: var(--text-main);
+    }
+    .card-actions {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+    }
+    .action-btn {
+        flex: 1;
+        padding: 9px;
+        border-radius: 10px;
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: 0.2s;
+    }
+    .action-btn:hover {
+        transform: translateY(-2px);
+    }
+    .btn-suspend {
+        background: #fef3c7;
+        color: #d97706;
+    }
+    .btn-delete {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+    .btn-restore {
+        background: #dcfce7;
+        color: #16a34a;
+        width: 100%;
+    }
+
+    .users-list {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .user-row {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.2s ease;
+        animation: fadeUp 0.4s ease both;
+    }
+    .user-row:hover {
+        transform: translateX(4px);
+        border-color: var(--blue-400);
+    }
+    .row-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .row-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: var(--gradient-soft);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        font-weight: 800;
+        color: var(--blue-600);
+    }
+    .row-info h4 {
+        font-size: 15px;
+        font-weight: 800;
+    }
+    .row-info p {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    .row-right {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        font-size: 13.5px;
+        color: var(--text-muted);
+        flex-wrap: wrap;
+    }
+    .row-right .card-role-badge {
+        margin: 0;
+    }
+    .users-grid .empty-users {
+        grid-column: 1 / -1;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 13.5px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-align: left;
+    }
+    .form-select,
+    .form-input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 14px;
+        outline: none;
+        margin-bottom: 16px;
+        background: var(--blue-50);
+    }
+    .form-select:focus,
+    .form-input:focus {
+        border-color: var(--blue-500);
+        background: #fff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="controls-bar anim">
+    <div class="search-box">
+        <i class="ph ph-magnifying-glass" style="color: var(--text-muted); font-size: 20px;"></i>
+        <input type="text" id="searchInput" placeholder="Search user name, email, or role...">
+    </div>
+    <div class="filter-group" id="filters">
+        <button class="filter-btn active" data-role="all">All</button>
+        <button class="filter-btn" data-role="student">Students</button>
+        <button class="filter-btn" data-role="teacher">Teachers</button>
+        <button class="filter-btn" data-role="admin">Admins</button>
+    </div>
+    <div class="view-toggle">
+        <button class="view-btn active" id="gridToggle" title="Grid View"><i class="ph ph-squares-four"></i></button>
+        <button class="view-btn" id="listToggle" title="Horizontal List View"><i class="ph ph-list"></i></button>
+    </div>
+</div>
+
+<div class="users-grid" id="usersGrid"></div>
+<div class="users-list" id="usersList"></div>
+
+<!-- SUSPEND MODAL -->
+<div class="modal-overlay" id="suspendModal">
+    <div class="modal-card" style="text-align: left;">
+        <h3 style="margin-bottom: 6px;">Suspend User Account</h3>
+        <p class="sub" style="margin-bottom: 20px;" id="suspendUserName">Set the duration for user suspension.</p>
+        <label class="form-label">Suspension Unit</label>
+        <select class="form-select" id="suspendUnit">
+            <option>Hour(s)</option><option>Day(s)</option><option>Week(s)</option><option>Month(s)</option><option>Year(s)</option>
+        </select>
+        <label class="form-label">Duration Amount</label>
+        <input type="number" class="form-input" id="suspendAmount" value="1" min="1">
+        <div class="modal-actions" style="margin-top: 6px;">
+            <button type="button" class="btn btn-ghost" id="suspendCancel">Cancel</button>
+            <button type="button" class="btn btn-primary" id="suspendConfirm" style="background:#d97706;box-shadow:0 6px 14px rgba(217,119,6,.3);">Confirm Suspension</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    Protco.ready(function () {
+        var esc = Protco.esc,
+            role = "all",
+            query = "",
+            view = "grid",
+            suspendId = null;
+
+        function fullName(u) {
+            return [u.firstName, u.lastName].filter(Boolean).join(" ") || u.name || "Unnamed";
+        }
+        function roleKey(u) {
+            return (u.role || "student").toLowerCase();
+        }
+        function reportsOf(u, reports) {
+            var n = fullName(u).toLowerCase();
+            return reports.filter(function (r) {
+                return String(r.reporterId) === String(u.id) || (r.reporter || "").toLowerCase() === n;
+            }).length;
+        }
+        function badge(u) {
+            if (u.status === "suspended")
+                return (
+                    '<span class="card-role-badge role-suspended">Suspended (' +
+                    esc(u.suspendLabel || "") +
+                    ")</span>"
+                );
+            var k = roleKey(u);
+            return '<span class="card-role-badge role-' + esc(k) + '">' + esc(u.role || "Student") + "</span>";
+        }
+        function avatar(u, cls) {
+            return u.photo
+                ? '<img src="' + esc(u.photo) + '" alt="">'
+                : '<span class="' + cls + '">' + esc(fullName(u).charAt(0).toUpperCase()) + "</span>";
+        }
+        function actions(u, small) {
+            var st = small ? ' style="padding:6px 12px;flex:none"' : "";
+            if (u.status === "suspended")
+                return (
+                    '<button class="action-btn btn-restore"' +
+                    st +
+                    ' data-act="restore" data-id="' +
+                    esc(u.id) +
+                    '"><i class="ph ph-arrow-counter-clockwise"></i> Restore' +
+                    (small ? "" : " Account") +
+                    "</button>"
+                );
+            return (
+                '<button class="action-btn btn-suspend"' +
+                st +
+                ' data-act="suspend" data-id="' +
+                esc(u.id) +
+                '"><i class="ph ph-lock-key"></i> Suspend</button>' +
+                '<button class="action-btn btn-delete"' +
+                st +
+                ' data-act="delete" data-id="' +
+                esc(u.id) +
+                '"><i class="ph ph-trash"></i> Delete</button>'
+            );
+        }
+
+        function render() {
+            var users = Protco.db.users(),
+                reports = Protco.db.reports();
+            var lifted = false;
+            users.forEach(function (u) {
+                if (u.status === "suspended" && u.suspendedUntil && u.suspendedUntil <= Date.now()) {
+                    u.status = "active";
+                    delete u.suspendLabel;
+                    delete u.suspendedUntil;
+                    lifted = true;
+                }
+            });
+            if (lifted) {
+                Protco.db.saveUsers(users);
+                return;
+            } // saves, then re-renders via protco:data
+            var rows = users.filter(function (u) {
+                var text = (fullName(u) + " " + (u.email || "") + " " + (u.role || "")).toLowerCase();
+                return (role === "all" || roleKey(u) === role) && text.indexOf(query) !== -1;
+            });
+            var empty =
+                '<div class="empty-users"><i class="ph ph-users-three"></i>' +
+                (users.length ? "No users match your search." : "No registered users yet.") +
+                "</div>";
+
+            document.getElementById("usersGrid").innerHTML = rows.length
+                ? rows
+                      .map(function (u, i) {
+                          return (
+                              '<div class="user-card" style="animation-delay:' +
+                              i * 0.05 +
+                              's">' +
+                              '<div class="card-avatar-wrapper">' +
+                              avatar(u, "card-avatar-initial") +
+                              "</div>" +
+                              '<div class="card-name">' +
+                              esc(fullName(u)) +
+                              "</div>" +
+                              '<div class="card-email">' +
+                              esc(u.email || u.contact || "") +
+                              "</div>" +
+                              badge(u) +
+                              '<div class="card-details"><span>Age: <strong>' +
+                              esc(u.age || "—") +
+                              "</strong></span><span>Reports: <strong>" +
+                              reportsOf(u, reports) +
+                              "</strong></span></div>" +
+                              '<div class="card-actions">' +
+                              actions(u) +
+                              "</div></div>"
+                          );
+                      })
+                      .join("")
+                : empty;
+
+            document.getElementById("usersList").innerHTML = rows.length
+                ? rows
+                      .map(function (u) {
+                          return (
+                              '<div class="user-row"><div class="row-left"><div class="row-avatar">' +
+                              avatar(u, "") +
+                              "</div>" +
+                              '<div class="row-info"><h4>' +
+                              esc(fullName(u)) +
+                              "</h4><p>" +
+                              esc(u.email || u.contact || "") +
+                              "</p></div></div>" +
+                              '<div class="row-right">' +
+                              badge(u) +
+                              "<span>Age: <strong>" +
+                              esc(u.age || "—") +
+                              "</strong></span><span>Reports: <strong>" +
+                              reportsOf(u, reports) +
+                              "</strong></span>" +
+                              '<div style="display:flex;gap:8px">' +
+                              actions(u, true) +
+                              "</div></div></div>"
+                          );
+                      })
+                      .join("")
+                : empty;
+        }
+
+        function setView(v) {
+            view = v;
+            document.getElementById("usersGrid").style.display = v === "grid" ? "grid" : "none";
+            document.getElementById("usersList").style.display = v === "list" ? "flex" : "none";
+            document.getElementById("gridToggle").classList.toggle("active", v === "grid");
+            document.getElementById("listToggle").classList.toggle("active", v === "list");
+        }
+        function update(id, fn) {
+            var a = Protco.db.users();
+            a.forEach(function (u) {
+                if (String(u.id) === String(id)) fn(u);
+            });
+            Protco.db.saveUsers(a);
+        }
+
+        document.getElementById("gridToggle").onclick = function () {
+            setView("grid");
+        };
+        document.getElementById("listToggle").onclick = function () {
+            setView("list");
+        };
+        document.getElementById("searchInput").addEventListener("input", function (e) {
+            query = e.target.value.toLowerCase();
+            render();
+        });
+        document.getElementById("filters").addEventListener("click", function (e) {
+            var b = e.target.closest(".filter-btn");
+            if (!b) return;
+            role = b.getAttribute("data-role");
+            document.querySelectorAll(".filter-btn").forEach(function (x) {
+                x.classList.toggle("active", x === b);
+            });
+            render();
+        });
+
+        document.addEventListener("click", function (e) {
+            var b = e.target.closest("[data-act]");
+            if (!b) return;
+            var id = b.getAttribute("data-id"),
+                act = b.getAttribute("data-act");
+            var u = Protco.db.users().filter(function (x) {
+                return String(x.id) === id;
+            })[0];
+            if (!u) return;
+            if (act === "delete") {
+                if (!confirm("Are you sure you want to permanently delete this user profile?")) return;
+                Protco.db.saveUsers(
+                    Protco.db.users().filter(function (x) {
+                        return String(x.id) !== id;
+                    }),
+                );
+                Protco.toast(fullName(u) + " was deleted.", { type: "success", title: "Users" });
+            } else if (act === "suspend") {
+                suspendId = id;
+                document.getElementById("suspendUserName").textContent =
+                    "Set suspension duration for " + fullName(u) + ".";
+                document.getElementById("suspendModal").classList.add("open");
+            } else if (act === "restore") {
+                update(id, function (x) {
+                    x.status = "active";
+                    delete x.suspendLabel;
+                    delete x.suspendedUntil;
+                });
+                Protco.toast("User account successfully restored!", { type: "success", title: "Users" });
+            }
+        });
+        document.getElementById("suspendCancel").onclick = function () {
+            document.getElementById("suspendModal").classList.remove("open");
+        };
+        document.getElementById("suspendConfirm").onclick = function () {
+            var amt = Math.max(1, parseInt(document.getElementById("suspendAmount").value, 10) || 1);
+            var unit = document.getElementById("suspendUnit").value;
+            var MS = {
+                "Hour(s)": 36e5,
+                "Day(s)": 864e5,
+                "Week(s)": 6048e5,
+                "Month(s)": 2592e6,
+                "Year(s)": 31536e6,
+            };
+            update(suspendId, function (x) {
+                x.status = "suspended";
+                x.suspendLabel = amt + " " + unit;
+                x.suspendedUntil = Date.now() + amt * MS[unit]; // <- ito ang binabasa ng user side
+            });
+            document.getElementById("suspendModal").classList.remove("open");
+            Protco.toast("Account suspended for " + amt + " " + unit + ".", { type: "warn", title: "Users" });
+        };
+
+        document.addEventListener("protco:data", render);
+        render();
+    });
+</script>
+{% endblock %}

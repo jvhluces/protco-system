@@ -1,9 +1,12 @@
 from django.db import models
 from django.utils import timezone
 
+  
 
 class DetectionResult(models.Model):
+    submitted = models.BooleanField(default=False)
     image = models.ImageField(upload_to="detections/original/")
+    
     detected_image = models.ImageField(
         upload_to="detections/detected/",
         blank=True,

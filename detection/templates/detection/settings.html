@@ -1,10 +1,10 @@
-```django
 {% extends "detection/base.html" %}
 
 {% block extra_css %}
 <style>
     /* ==============================
-       SETTINGS PAGE
+       SETTINGS PAGE — Theme matched
+       ONLY UI CHANGES, NO BACKEND TOUCHED
     ============================== */
 
     .settings-page {
@@ -33,9 +33,10 @@
         display: grid;
         place-items: center;
         flex-shrink: 0;
-        color: var(--blue);
-        background: var(--blue-light);
+        color: #fff;
+        background: var(--gradient-blue);
         border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
 
     .settings-heading-icon svg {
@@ -45,26 +46,35 @@
 
     .settings-title {
         margin: 0;
-        color: var(--navy);
         font-size: 25px;
         font-weight: 750;
         letter-spacing: -0.5px;
+        background: var(--gradient-blue);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
     }
 
     .settings-subtitle {
         margin: 6px 0 0;
-        color: var(--muted);
+        color: var(--text-muted);
         font-size: 13px;
         line-height: 1.5;
     }
 
     .settings-section {
-        background: var(--white);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        box-shadow: var(--card-shadow);
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        box-shadow: var(--shadow-sm);
         overflow: hidden;
         margin-bottom: 20px;
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .settings-section:hover {
+        box-shadow: var(--shadow-md);
+        border-color: var(--blue-200);
     }
 
     .settings-section-header {
@@ -72,8 +82,8 @@
         align-items: center;
         gap: 13px;
         padding: 19px 24px;
-        background: #fbfcfe;
-        border-bottom: 1px solid var(--border);
+        background: linear-gradient(to right, var(--blue-50), #ffffff);
+        border-bottom: 1px solid var(--border-color);
     }
 
     .section-icon {
@@ -83,21 +93,21 @@
         place-items: center;
         flex-shrink: 0;
         background: var(--blue-light);
-        color: var(--blue);
+        color: var(--blue-600);
         border-radius: 11px;
         font-size: 17px;
     }
 
     .section-heading {
         margin: 0;
-        color: var(--navy);
+        color: var(--text-main);
         font-size: 15px;
         font-weight: 700;
     }
 
     .section-description {
         margin: 4px 0 0;
-        color: var(--muted);
+        color: var(--text-muted);
         font-size: 12px;
     }
 
@@ -118,7 +128,7 @@
     .settings-label {
         display: block;
         margin-bottom: 9px;
-        color: var(--text);
+        color: var(--text-main);
         font-size: 13px;
         font-weight: 650;
     }
@@ -127,19 +137,19 @@
         width: 100%;
         min-height: 44px;
         padding: 10px 38px 10px 13px;
-        border: 1px solid var(--border);
+        border: 1px solid var(--border-color);
         border-radius: 10px;
         outline: none;
         background-color: #fff;
-        color: var(--text);
+        color: var(--text-main);
         font-size: 13px;
         cursor: pointer;
         transition: border-color .2s, box-shadow .2s;
     }
 
     .settings-select:focus {
-        border-color: var(--blue);
-        box-shadow: 0 0 0 3px rgba(40, 120, 223, .12);
+        border-color: var(--blue-500);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
 
     .settings-option-row {
@@ -148,7 +158,7 @@
         align-items: center;
         gap: 20px;
         padding: 19px 0;
-        border-bottom: 1px solid #f0f3f7;
+        border-bottom: 1px solid var(--blue-50);
     }
 
     .settings-option-row:first-child {
@@ -162,14 +172,14 @@
 
     .option-title {
         margin: 0;
-        color: var(--text);
+        color: var(--text-main);
         font-size: 13px;
         font-weight: 650;
     }
 
     .option-description {
         margin: 5px 0 0;
-        color: var(--muted);
+        color: var(--text-muted);
         font-size: 12px;
         line-height: 1.5;
     }
@@ -194,9 +204,9 @@
     .switch-track {
         position: absolute;
         inset: 0;
-        background: #d9e0e9;
+        background: #cbd5e1;
         border-radius: 30px;
-        transition: background .2s;
+        transition: background .25s ease;
     }
 
     .switch-track::before {
@@ -208,12 +218,12 @@
         top: 3px;
         background: white;
         border-radius: 50%;
-        box-shadow: 0 1px 3px rgba(0,0,0,.15);
-        transition: transform .2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,.15);
+        transition: transform .25s ease;
     }
 
     .settings-switch input:checked + .switch-track {
-        background: var(--blue);
+        background: var(--gradient-blue);
     }
 
     .settings-switch input:checked + .switch-track::before {
@@ -221,7 +231,7 @@
     }
 
     .settings-switch input:focus-visible + .switch-track {
-        outline: 3px solid rgba(40,120,223,.2);
+        outline: 3px solid rgba(59, 130, 246, 0.2);
         outline-offset: 3px;
     }
 
@@ -240,18 +250,19 @@
         font-size: 13px;
         font-weight: 650;
         cursor: pointer;
-        transition: .2s;
+        transition: all .2s ease;
     }
 
     .settings-btn-reset {
         background: #fff;
-        border: 1px solid var(--border);
-        color: #64748b;
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
     }
 
     .settings-btn-reset:hover {
-        background: #f7f9fc;
-        border-color: #cbd5e1;
+        background: var(--blue-50);
+        border-color: var(--blue-200);
+        color: var(--blue-700);
     }
 
     .settings-btn-save {
@@ -259,16 +270,15 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-        background: var(--blue);
-        border: 1px solid var(--blue);
+        background: var(--gradient-blue);
+        border: 0;
         color: #fff;
-        box-shadow: 0 3px 9px rgba(40,120,223,.18);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     }
 
     .settings-btn-save:hover {
-        background: #1e65c0;
-        border-color: #1e65c0;
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
     }
 
     .settings-btn svg {
@@ -345,7 +355,7 @@
         <!-- DASHBOARD PREFERENCES -->
         <section class="settings-section">
             <div class="settings-section-header">
-                <div class="section-icon">📊</div>
+                <svg class="ic"><use href="#i-dashboard"/></svg>
                 <div>
                     <h2 class="section-heading">Dashboard Preferences</h2>
                     <p class="section-description">
@@ -424,7 +434,7 @@
         <!-- NOTIFICATIONS -->
         <section class="settings-section">
             <div class="settings-section-header">
-                <div class="section-icon">🔔</div>
+                <svg class="ic"><use href="#i-notification"/></svg>
                 <div>
                     <h2 class="section-heading">Notifications &amp; Alerts</h2>
                     <p class="section-description">
@@ -474,7 +484,7 @@
         <!-- SYSTEM SETTINGS -->
         <section class="settings-section">
             <div class="settings-section-header">
-                <div class="section-icon">🕒</div>
+                <svg class="ic"><use href="#i-clock"/></svg>
                 <div>
                     <h2 class="section-heading">System Settings</h2>
                     <p class="section-description">

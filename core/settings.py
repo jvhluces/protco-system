@@ -26,7 +26,7 @@ OPENWEATHER_CITY = os.environ.get("OPENWEATHER_CITY", "Manito,PH").strip()
 # ✅ Tama ang model name — gemini-3.8-flash ay valid 
 # ✅ May fallback sa mas siguradong gumagana
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash").strip()
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash").strip()
 
 # --- Security ---
 SECRET_KEY = os.environ.get(
@@ -48,6 +48,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "detection",
+    
+    'admin_panel',  # IDAGDAG MO TO
 ]
 
 MIDDLEWARE = [
@@ -114,3 +116,13 @@ MEDIA_ROOT = BASE_DIR / "media"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# --- Login / Logout Redirects ---
+# Pag hindi naka-login at binuksan yung dashboard, dito sya dadalhin
+LOGIN_URL = '/admin-panel/login/'
+
+# Pag nag-login ka na, dito ka dadalhin
+LOGIN_REDIRECT_URL = '/admin-panel/dashboard/'
+
+# Pag nag-logout ka, dito ka dadalhin
+LOGOUT_REDIRECT_URL = '/admin-panel/login/'
