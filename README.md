@@ -40,7 +40,7 @@ Before running the system, make sure the following are installed on your compute
 ### Python Packages You Need to Install:
 Run this in the terminal inside the project folder:
 
-```bash<br>
+```bash
 pip install django psycopg2-binary python-dotenv requests pillow onnxruntime opencv-python
 
 
