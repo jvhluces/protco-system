@@ -44,5 +44,9 @@ Run this in the terminal inside the project folder:
 pip install django psycopg2-binary python-dotenv requests pillow onnxruntime opencv-python
 
 
+### How to run the system
+
+```bash
+python manage.py runserver
 
 
