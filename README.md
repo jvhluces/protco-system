@@ -7,10 +7,10 @@ ProtCo: An AI-Assisted Web-Based Spatial Decision Support System for School Infr
 **Database:** PostgreSQL<br>
 
 ## Members/ Authors
-- Araya, Lovely Jane
-- Aspa, Natasha Lorraine
-- Luces, Janine
-- Talaogon, Anthony
+Araya, Lovely Jane – Admin Dashboard & Management Module (Developed the admin interface and system monitoring dashboard)
+​Aspa, Natasha Lorraine – Documentation & Research Papers (Handled system documentation, manuscripts, and technical papers)
+​Luces, Janine – Damage Detection & AI Suggestions (Developed the automated damage detection model and AI-driven recommendation feature)
+​Talaogon, Anthony – Weather Forecast Module (Implemented real-time weather tracking and forecasting integration)
 
 ## Description
 
